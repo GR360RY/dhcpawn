@@ -1,0 +1,17 @@
+dn: dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}
+objectClass: domain
+dc: {{ openldap_server_domain_name.split('.')[0] }}
+
+dn: cn={{ansible_hostname}},dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}
+objectClass: dhcpServer
+objectClass: top
+cn: {{ansible_hostname}}
+dhcpServiceDN: cn=DHCP Config,cn={{ansible_hostname}},dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}
+
+dn: cn=DHCP Config,cn={{ansible_hostname}},dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}
+objectClass: dhcpOptions
+objectClass: dhcpService
+objectClass: top
+cn: DHCP Config
+dhcpPrimaryDN: cn={{ansible_hostname}},dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}
+

@@ -1,0 +1,8 @@
+ldap-server "localhost";
+ldap-port 389;
+ldap-username "cn=Manager,dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}";
+ldap-password "{{openldap_server_rootpw}}";
+ldap-base-dn "dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}";
+ldap-method dynamic;
+#ldap-method static;
+ldap-debug-file "/var/log/dhcp-ldap-startup.log";
