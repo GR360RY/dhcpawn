@@ -1,38 +1,74 @@
-Role Name
+DHCPawn
 =========
 
-A brief description of the role goes here.
+ISC Bind DHCP Server with Ldap Backend.
 
-Requirements
-------------
+Setting Up Development Environment
+----------------------------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+### Install Prerequisites 
 
-Role Variables
---------------
+__Install Ansible:__
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+On Ubuntu:
+    
+    sudo apt-get install software-properties-common
+    sudo apt-add-repository -y ppa:ansible/ansible
+    sudo apt-get update
+    sudo apt-get -y install ansible git
 
-Dependencies
-------------
+On Mac:
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+    brew install ansible git 
 
-Example Playbook
-----------------
+__Install VirtualBox:__
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+On Ubuntu:
+    
+    sudo echo "deb http://download.virtualbox.org/virtualbox/debian trusty contrib" >> /etc/apt/sources.list
+    wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add -
+    sudo apt-get update
+    sudo apt-get install virtualbox-4.3
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+On Mac:
 
-License
--------
+Download [VirtualBox]( http://download.virtualbox.org/virtualbox/4.3.20/VirtualBox-4.3.20-96996-OSX.dmg ) and install from DMG file.
 
-BSD
+__Install Vagrant:__
 
-Author Information
-------------------
+On Ubuntu:
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+    sudo dpkg -i https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.1_x86_64.deb
+
+On Mac:
+
+Download [Vagrant]( https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.1.dmg ) and install from DMG file.
+
+### Get the Source
+
+    cd ~/
+    git clone https://github.com/GR360RY/dhcpawn.git
+    cd ~/dhcpawn
+
+### Starting up the DHCP Server and Clients
+
+Start the DHCP server:
+
+    vagrant up
+
+Starting up DHCP clients:
+    
+    vagrant up cl01
+    vagrant up cl02
+
+### Connecting to Backend Ldap 
+
+Install Apache Directory Studio ([Download Link](http://directory.apache.org/studio/downloads.html)). Configure Apache Directory Studio to connect to LDAP:
+
+    Hostname: localhost
+    Port: 10389
+    Bind DN or User: cn=Manager,dc=dhcpawn,dc=net
+    Bind password: dhcpawn
+    Encryption Method: No encryption
+
+
