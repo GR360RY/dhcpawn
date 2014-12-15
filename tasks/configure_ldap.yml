@@ -34,11 +34,40 @@
   notify: 
    - restart slapd
 
+# Workaround for Ubuntu Bug: 1262653
+# Open LDAP service is not converted to upstart job. DHCP fails to start as OpenLdap is not running.
+# We cannot provide proper dependancies for the service as slapd and isc-dhcp-server services are started
+# using different methods.
+
+- name: Disable System-V OpenLdap Service on Ubuntu
+  service: name=slapd enabled=no
+  when: ansible_os_family == "Debian"
+
+- name: Remove System-V OpenLdap init script on Ubuntu
+  file: path=/etc/init.d/slapd state=absent
+  register: remove_slapd_init
+  when: ansible_os_family == "Debian"
+
+- name: Add Open Ldap upstart job for Ubuntu
+  copy: src=etc_init_slapd.conf dest=/etc/init/slapd.conf mode=0644
+  register: result
+  when: ansible_os_family == "Debian"
+
+- name: Reload configuration
+  command: initctl reload-configuration
+  when: ansible_os_family == "Debian" and result.changed
+
+# END of Workaround for Ubuntu Bug: 1262653
+
 - name: Start the slapd service
-  service: name=slapd state=started enabled=yes 
+  service: name=slapd state=started enabled=yes
 
 - name: Copy the templates for creating base dn and DHCP Configuration
   template: src=domain.ldif dest=/tmp
 
 - name: add the base domain
   shell: ldapadd -x -D "cn=Manager,dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}" -w {{ openldap_server_rootpw }} -f /tmp/domain.ldif && touch {{ openldap_server_app_path }}/rootdn_created creates={{ openldap_server_app_path }}/rootdn_created
+
+- name: Start DHCPd service
+  service: name=isc-dhcp-server state=started enabled=yes
+  when: ansible_os_family == "Debian"

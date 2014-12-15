@@ -51,3 +51,13 @@
 - name: Update DHCP Daemon startup configuration for Ubuntu
   template: src=isc-dhcp-server.j2 dest=/etc/default/isc-dhcp-server owner=root group=root mode=0644
   when: ansible_os_family == "Debian"
+
+- name: Create DHCPd log file directory
+  file: path=/var/log/dhcpd state=directory owner=root group=root mode=755
+
+- name: Remove AppArmor
+  apt: name={{ item }} state=absent
+  with_items:
+    - apparmor
+    - apparmor-utils
+  when: ansible_os_family == "Debian"
