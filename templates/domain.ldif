@@ -38,9 +38,5 @@ cn: 10.100.100.0
 dhcpNetMask: 22
 dhcpComments: Test Subnet
 dhcpOption: broadcast-address 10.100.100.255
-
-dn: cn=Test Pool,cn=10.100.100.0,ou=Subnets,cn=DHCP Config,cn={{ansible_hostname}},dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}
-objectClass: dhcpPool
-objectClass: top
-cn: Test Pool
 dhcpRange: 10.100.100.1 10.100.100.100
+
