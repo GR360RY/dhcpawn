@@ -9,6 +9,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     dhcpsrv.vm.box = "ubuntu/trusty64"
     dhcpsrv.vm.hostname = "dhcpsrv"
     dhcpsrv.vm.network "forwarded_port", guest: 389, host: 10389
+    dhcpsrv.vm.network "forwarded_port", guest: 80, host: 10080
     dhcpsrv.vm.network "private_network", ip: "10.100.100.254"
     dhcpsrv.vm.provision "ansible" do |ansible|
       ansible.playbook = "dhcpawn.yml"
