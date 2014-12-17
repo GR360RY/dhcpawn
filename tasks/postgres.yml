@@ -11,7 +11,7 @@
   when: ansible_os_family == 'Debian'
 
 - name: Start postgresql
-  service: name=postgresql state=started
+  service: name=postgresql state=started enabled=yes
 
 - name: setup db
   action: postgresql_db name={{app_name}}
