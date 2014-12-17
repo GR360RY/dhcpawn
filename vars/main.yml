@@ -3,3 +3,5 @@
 
 env:
  RUNLEVEL: 1
+
+app_name: dhcpawn

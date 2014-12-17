@@ -9,3 +9,6 @@
 
 - name: restart httpd
   service: name=httpd state=restarted enabled=yes
+
+- name: reload nginx config
+  shell: nginx -s reload

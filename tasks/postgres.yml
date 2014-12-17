@@ -1,0 +1,26 @@
+---
+
+- name: Install postgres packages for RedHat
+  yum: name={{ item }} state=installed
+  with_items: postgres_server_pkgs
+  when: ansible_os_family == 'RedHat'
+
+- name: Install postgres packages for Ubuntu
+  apt: name={{ item }} state=installed
+  with_items: postgres_server_pkgs
+  when: ansible_os_family == 'Debian'
+
+- name: Start postgresql
+  service: name=postgresql state=started
+
+- name: setup db
+  action: postgresql_db name={{app_name}}
+  sudo_user: postgres
+  sudo: true
+  tags: db
+
+- name: setup db user
+  action: postgresql_user name={{app_name}} password={{app_name}} db={{app_name}} priv=ALL role_attr_flags=SUPERUSER
+  sudo_user: postgres
+  sudo: true
+  tags: db
