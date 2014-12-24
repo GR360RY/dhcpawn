@@ -5,3 +5,19 @@ env:
  RUNLEVEL: 1
 
 app_name: dhcpawn
+
+python_packages:
+  - Flask>=0.10.1
+  - Flask-Mail
+  - Flask-Script
+  - Flask-Loopback
+  - weber-utils
+  - uwsgi
+  - gevent
+  - pytest
+  - click>=2.0
+  - colorama
+  - requests
+  - PyYAML
+  - URLObject
+  - python-ldap

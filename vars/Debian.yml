@@ -32,3 +32,5 @@ webapp_server_pkgs:
   - python-dev
   - libevent-dev
   - libpq-dev
+  - libsasl2-dev
+  - libldap2-dev

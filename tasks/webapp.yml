@@ -17,3 +17,7 @@
 
 - name: redis running
   service: name=redis-server state=started enabled=yes
+
+- name: python packages installation
+  pip: name={{item}} virtualenv=/env/dhcpawn
+  with_items: python_packages
