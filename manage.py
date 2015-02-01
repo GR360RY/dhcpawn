@@ -85,7 +85,7 @@ def _run_deploy(dest):
         # Vagrant will invoke ansible
         environ = os.environ.copy()
         environ["PATH"] = "{}:{}".format(os.path.dirname(ansible), environ["PATH"])
-        subprocess.check_call('vagrant up', shell=True, env=environ)
+        subprocess.check_call('vagrant provision', shell=True, env=environ)
     else:
         cmd = [ansible, "-i",
                from_project_root("ansible", "inventories", dest)]

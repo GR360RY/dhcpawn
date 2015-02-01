@@ -57,11 +57,11 @@ Start the DHCP server:
     vagrant up
 
 Starting up DHCP clients:
-    
+
     vagrant up cl01
     vagrant up cl02
 
-### Connecting to Backend Ldap 
+### Connecting to Backend Ldap
 
 Install Apache Directory Studio ([Download Link](http://directory.apache.org/studio/downloads.html)). Configure Apache Directory Studio to connect to LDAP:
 
@@ -71,4 +71,8 @@ Install Apache Directory Studio ([Download Link](http://directory.apache.org/stu
     Bind password: dhcpawn
     Encryption Method: No encryption
 
+### Development and deployment
 
+DHCPawn uses ([weber-backend](https://github.com/vmalloc/weber-backend)). Further instructions can be read there, but DHCPawn is set up to allow deployment to the virtual DHCP server by running:
+
+    python manage.py deploy --dest=vagrant
