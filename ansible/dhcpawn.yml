@@ -1,0 +1,6 @@
+---
+- hosts: dhcpsrv
+  vars_files:
+    - ../dhcpawn.yml
+  roles:
+    - dhcpawn

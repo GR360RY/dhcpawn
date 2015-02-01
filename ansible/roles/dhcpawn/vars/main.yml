@@ -1,0 +1,10 @@
+---
+# vars file for dhcpawn
+
+env:
+ RUNLEVEL: 1
+
+app_name: dhcpawn
+
+python_packages:
+  - python-ldap
