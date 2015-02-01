@@ -1,5 +1,3 @@
-.vagrant
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -43,6 +41,23 @@ coverage.xml
 .mr.developer.cfg
 .project
 .pydevproject
+.envrc
+node_modules
+celerybeat-schedule
+dump.rdb
+.vagrant
+src_pkg.tar
+.inventory
+src/static/font
+./src/static/vendor/font-awesome/src/assets/img/icon-flag.pdf
+src/static/vendor/pines-notify/oxygen
+src/static/vendor/bootstrap/bootstrap.css
+.DS_Store
+.env
+.ansible-env
+.wheels
+persistent
+.vagrant
 
 # Rope
 .ropeproject

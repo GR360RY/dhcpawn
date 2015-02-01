@@ -1,0 +1,10 @@
+alembic>=0.7.3
+psycopg2
+Flask>=0.10.1
+Flask-Mail
+Flask-Migrate>=1.3.0
+Flask-SQLAlchemy
+PyYAML
+URLObject
+uwsgi
+weber-utils>=1.1.5

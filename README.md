@@ -1,74 +1,44 @@
-DHCPawn
-=========
+Weber-Backend
+=============
 
-ISC Bind DHCP Server with Ldap Backend.
+![Build Status](https://secure.travis-ci.org/vmalloc/weber-backend.png?branch=master ) 
 
-Setting Up Development Environment
-----------------------------------
+weber-backend is a Flask application template, intended to get you started with a Flask-powered webapp as quickly as possible. weber-backend includes a database layer through Flask-SQLAlchemy, migrations through Alembic, asynchronous tasks via RQ and Redis, and more.
 
-### Install Prerequisites 
+weber-backend puts an emphasis on ease of deployment (with *ansible*), and not getting in your way while you focus on your actual app logic.
 
-__Install Ansible:__
+Getting Started
+===============
 
-On Ubuntu:
-    
-    sudo apt-get install software-properties-common
-    sudo apt-add-repository -y ppa:ansible/ansible
-    sudo apt-get update
-    sudo apt-get -y install ansible git
+1. Check out the repository
+2. Go through the configuration in `src/app.yml` - most configuration options there are self-explanatory, and you might be interested in tweaking them to your needs.
+3. Make sure you have `virtualenv` installed
+4. Run the test server to experiment:
+```
+$ python manage.py testserver
+```
 
-On Mac:
+Using an alternative Python version
+===================================
+By default, weber looks for a Python executable named `python2.7`. This can be overridden by changing `_lib/bootstrapping.py`. For example, it can be set to `python3.4`.
 
-    brew install ansible git 
+If you use an alternative interpreter then remember to add it to `ansible/roles/common/vars/main.yml`.
 
-__Install VirtualBox:__
+Installation/Deployment
+=======================
 
-On Ubuntu:
-    
-    sudo echo "deb http://download.virtualbox.org/virtualbox/debian trusty contrib" >> /etc/apt/sources.list
-    wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add -
-    sudo apt-get update
-    sudo apt-get install virtualbox-4.3
+See `INSTALLING.md`
 
-On Mac:
+Development
+===========
 
-Download [VirtualBox]( http://download.virtualbox.org/virtualbox/4.3.20/VirtualBox-4.3.20-96996-OSX.dmg ) and install from DMG file.
+To start developing and testing, bootstrap the development environment with:
 
-__Install Vagrant:__
+```
+$ python manage.py bootstrap --develop
+```
 
-On Ubuntu:
+License
+=======
 
-    sudo dpkg -i https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.1_x86_64.deb
-
-On Mac:
-
-Download [Vagrant]( https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.1.dmg ) and install from DMG file.
-
-### Get the Source
-
-    cd ~/
-    git clone https://github.com/GR360RY/dhcpawn.git
-    cd ~/dhcpawn
-
-### Starting up the DHCP Server and Clients
-
-Start the DHCP server:
-
-    vagrant up
-
-Starting up DHCP clients:
-    
-    vagrant up cl01
-    vagrant up cl02
-
-### Connecting to Backend Ldap 
-
-Install Apache Directory Studio ([Download Link](http://directory.apache.org/studio/downloads.html)). Configure Apache Directory Studio to connect to LDAP:
-
-    Hostname: localhost
-    Port: 10389
-    Bind DN or User: cn=Manager,dc=dhcpawn,dc=net
-    Bind password: dhcpawn
-    Encryption Method: No encryption
-
-
+Weber is distributed under the BSD 3-clause license.
