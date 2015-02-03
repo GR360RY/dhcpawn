@@ -85,7 +85,17 @@ def _run_deploy(dest):
         # Vagrant will invoke ansible
         environ = os.environ.copy()
         environ["PATH"] = "{}:{}".format(os.path.dirname(ansible), environ["PATH"])
-        subprocess.check_call('vagrant provision', shell=True, env=environ)
+        inventory = open('ansible/inventories/vagrant','r')
+        current = inventory.read()
+        inventory.close()
+        if 'webapp' not in current and 'db' not in current:
+            inventory = open('ansible/inventories/vagrant','a')
+            inventory.write('\n- include: db.yml\n- include: webapp.yml')
+            inventory.close()
+        subprocess.check_call('vagrant up --provision', shell=True, env=environ)
+        inventory = open('ansible/inventories/vagrant','w')
+        inventory.write('current')
+        inventory.close()
     else:
         cmd = [ansible, "-i",
                from_project_root("ansible", "inventories", dest)]

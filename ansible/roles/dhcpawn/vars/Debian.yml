@@ -4,6 +4,8 @@ openldap_server_pkgs:
   - python-selinux
   - openssl
   - isc-dhcp-server-ldap
+  - libldap2-dev
+  - libsasl2-dev
 
 openldap_server_app_path: "/etc/ldap/"
 openldap_server_user: "openldap"

@@ -6,15 +6,12 @@
 - include: redis.yml
 - include: nginx.yml
 - include: configuration.yml
-- stat: path=../src_pkg.tar
-  register: source_package
 - name: copy source
   copy: src=../src_pkg.tar dest={{webapp_archive_location}}
   register: sources
   notify: reload nginx config
-  when: source_package.stat.exists == True
 - include: install_sources.yml
-  when: (source_package.stat.exists == True) and (sources.changed or configuration.changed)
+  when: sources.changed or configuration.changed
 - name: configure supervisor
   action: template src=../templates/supervisor.j2 dest=/etc/supervisor/conf.d/{{app_name}}-wsgi.conf
   register: supervisor_conf

@@ -13,8 +13,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     dhcpsrv.vm.network "private_network", ip: "10.100.100.254"
     dhcpsrv.vm.provision "ansible" do |ansible|
       ansible.groups = {
-        "webapp" => ["dhcpsrv"],
         "db" => ["dhcpsrv"],
+        "webapp" => ["dhcpsrv"],
+        "dhcpawn" => ["dhcpsrv"],
       }
       ansible.playbook = "ansible/site.yml"
       ansible.extra_vars = {
