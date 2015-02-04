@@ -4,6 +4,7 @@ import os
 import sys
 import yaml
 from flask.ext.mail import Mail
+import ldap
 
 import logbook
 
@@ -17,7 +18,7 @@ app.config["SECRET_KEY"] = ""
 app.config['SQLALCHEMY_DATABASE_URI'] = os.path.expandvars(
     os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:////tmp/__demo_db.sqlite'))
 
-ldap_obj = ldap.initialize('ldap://localhost:1390')
+ldap_obj = ldap.initialize('ldap://localhost:389')
 
 _CONF_D_PATH = os.environ.get('CONFIG_DIRECTORY', os.path.join(ROOT_DIR, "..", "conf.d"))
 
