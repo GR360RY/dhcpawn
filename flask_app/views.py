@@ -1,5 +1,4 @@
 from flask import render_template
-import sys
 import ldap
 
 from .app import app, ldap_obj
