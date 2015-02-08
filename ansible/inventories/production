@@ -1,5 +1,7 @@
 [webapp]
-rotem-ubuntu-2 ansible_ssh_user=root
+
 
 [db]
-rotem-ubuntu-2 ansible_ssh_user=root
+
+
+[dhcpawn]
