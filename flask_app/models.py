@@ -1,5 +1,6 @@
 from .app import app, ldap_obj
 from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.restless import APIManager
 import ldap
 
 db = SQLAlchemy(app)
@@ -24,7 +25,7 @@ class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     hosts = db.relationship('Host', backref='group', lazy='dynamic')
-    server_id = db.Column(db.Integer, db.ForeignKey('dhcpserver.id'))
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'))
 
     def dn(self):
         return 'cn=%s,%s' % (self.name, self.server.dn())
@@ -43,14 +44,14 @@ class Subnet(db.Model):
     broadcast_address = db.Column(db.String(255))
     routers = db.Column(db.String(255))
     ips = db.relationship('IP', backref='subnet', lazy='dynamic')
-    server_id = db.Column(db.Integer, db.ForeignKey('dhcpserver.id'))
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'))
 
 class IP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     address = db.Column(db.String(255))
     subnet_id = db.Column(db.Integer, db.ForeignKey('subnet.id'))
 
-class DHCPServer(db.Model):
+class Server(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     hostname = db.Column(db.String(255))
     groups = db.relationship('Group', backref='server', lazy='dynamic')

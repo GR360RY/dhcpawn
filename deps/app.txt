@@ -4,6 +4,7 @@ Flask>=0.10.1
 Flask-Mail
 Flask-Migrate>=1.3.0
 Flask-SQLAlchemy
+Flask-Restless
 PyYAML
 URLObject
 uwsgi
