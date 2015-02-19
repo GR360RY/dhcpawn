@@ -37,6 +37,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     cl01.vm.provider :virtualbox do |box|
       box.customize ["modifyvm", :id, "--name", "cl01" ]
       box.customize ["modifyvm", :id, "--nic2", "intnet" ]
+      box.customize ["modifyvm", :id, "--macaddress2", "080027267ae7" ]
     end
   end
 
@@ -47,6 +48,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     cl02.vm.provider :virtualbox do |box|
       box.customize ["modifyvm", :id, "--name", "cl02" ]
       box.customize ["modifyvm", :id, "--nic2", "intnet" ]
+      box.customize ["modifyvm", :id, "--macaddress2", "080027196ca4" ]
     end
   end
 

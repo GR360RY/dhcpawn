@@ -19,3 +19,4 @@ required_packages:
     - libpq-dev
     - libldap2-dev
     - libsasl2-dev
+    - ipython
