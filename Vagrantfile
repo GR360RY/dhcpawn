@@ -10,6 +10,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     dhcpsrv.vm.hostname = "dhcpsrv"
     dhcpsrv.vm.network "forwarded_port", guest: 389, host: 10389
     dhcpsrv.vm.network "forwarded_port", guest: 80, host: 10080
+    dhcpsrv.vm.network "forwarded_port", guest: 5432, host: 15432
     dhcpsrv.vm.network "private_network", ip: "10.100.100.254"
     dhcpsrv.vm.provision "ansible" do |ansible|
       ansible.groups = {
@@ -20,7 +21,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       ansible.playbook = "ansible/site.yml"
       ansible.extra_vars = {
         dhcp_interfaces: 'eth1',
-        install_with_debug: true
+        install_with_debug: true,
+        allow_postgres_all: true
       }
       ansible.sudo = true
     end

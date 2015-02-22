@@ -1,16 +1,22 @@
 - apt_key: url=http://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc state=present
-- apt_repository: repo='deb http://apt.postgresql.org/pub/repos/apt/ {{ansible_distribution_release}}-pgdg main 9.3' state=present
+- apt_repository: repo='deb http://apt.postgresql.org/pub/repos/apt/ {{ansible_distribution_release}}-pgdg main 9.4' state=present
 - apt: pkg={{item}} state=latest update_cache=yes
   with_items:
-    - postgresql-client-9.3
-    - postgresql-9.3
-    - postgresql-server-dev-9.3
+    - postgresql-client-9.4
+    - postgresql-9.4
+    - postgresql-server-dev-9.4
 - name: install db prerequisites
   apt: pkg={{item}} state=latest update_cache=yes
   with_items:
     - python-psycopg2 # needed for the postgresql ansible tasks
   tags: db
-- service: name=postgresql state=started
+- name: config postgresql
+  lineinfile: dest=/etc/postgresql/9.4/main/postgresql.conf regexp=^listen_addresses line="listen_addresses='*'"
+  when: allow_postgres_all
+- name: config postgres hosts
+  lineinfile: dest=/etc/postgresql/9.4/main/pg_hba.conf regexp='0\.0\.0\.0' line="host  all  all  0.0.0.0/0  md5"
+  when: allow_postgres_all
+- service: name=postgresql state=restarted enabled=yes
 - name: setup db
   action: postgresql_db name={{app_name}}
   sudo_user: postgres

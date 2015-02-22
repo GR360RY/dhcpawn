@@ -3,7 +3,7 @@ import subprocess
 from .bootstrapping import which
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-_ENV_DIR = os.environ.get("VIRTUALENV_PATH", os.path.join(_PROJECT_ROOT, ".ansible-env"))
+_ENV_DIR = os.environ.get("VIRTUALENV_PATH", os.path.join(_PROJECT_ROOT, ".env"))
 _PIP = os.path.join(_ENV_DIR, 'bin', 'pip')
 
 

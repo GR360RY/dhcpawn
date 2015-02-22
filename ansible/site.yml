@@ -1,2 +1,4 @@
 ---
 - include: dhcpawn.yml
+- include: db.yml
+- include: webapp.yml

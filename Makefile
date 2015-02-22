@@ -5,6 +5,8 @@ testserver: env
 
 clean:
 	rm -rf .env
+	rm -rf .ansible-env
+	rm -rf src_pkg.tar
 	find . -name "*.pyc" -delete
 
 test:

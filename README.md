@@ -6,25 +6,21 @@ ISC Bind DHCP Server with Ldap Backend.
 Setting Up Development Environment
 ----------------------------------
 
-### Install Prerequisites 
+### Install Prerequisites
 
-__Install Ansible:__
+__Install virtualenv:__
 
-On Ubuntu:
-    
-    sudo apt-get install software-properties-common
-    sudo apt-add-repository -y ppa:ansible/ansible
-    sudo apt-get update
-    sudo apt-get -y install ansible git
+    sudo apt-get install python-virtualenv
 
 On Mac:
 
-    brew install ansible git 
+    sudo easy_install pip
+    sudo pip install virtualenv
 
 __Install VirtualBox:__
 
 On Ubuntu:
-    
+
     sudo echo "deb http://download.virtualbox.org/virtualbox/debian trusty contrib" >> /etc/apt/sources.list
     wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add -
     sudo apt-get update
@@ -50,16 +46,36 @@ Download [Vagrant]( https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.1.dmg )
     git clone https://github.com/GR360RY/dhcpawn.git
     cd ~/dhcpawn
 
-### Starting up the DHCP Server and Clients
+### Development and deployment
 
-Start the DHCP server:
+Deploy DHCPawn to the vagrant DHCP server:
 
-    vagrant up
+    python manage.py deploy --dest=vagrant
 
-Starting up DHCP clients:
+DHCPawn is will run on port 80 of the virtual host, which is forwarded to port 10080. To see a list of registered hosts, use the DHCPawn API:
 
-    vagrant up cl01
-    vagrant up cl02
+    curl http://localhost:10080/api/hosts/
+
+DHCPawn can also be run locally for easier debugging. To use the vagrant host as a PostgreSQL and LDAP server, set the following:
+
+    export SQLALCHEMY_DATABASE_URI=postgresql://dhcpawn:dhcpawn@localhost:15432/dhcpawn
+    export LDAP_DATABASE_URI=ldap://localhost:10389
+
+and run:
+
+    python manage.py testserver
+
+This starts a local Flask process on port 8000. Note that this, and the deployment, create a python virtualenv at .env/. To utilize this virtualenv outside of manage.py, run:
+
+    source .env/bin/activate
+
+### DHCPawn API
+
+DHCPawn uses a REST API. More complete documentation will be added soon, but the following is an example of adding cl01 to a test group:
+
+    curl http://localhost:10080/api/servers/ -d "hostname=dhcpawn.net" -X POST
+    curl http://localhost:10080/api/groups/ -d "name=testgroup" -d "server_id=1" -X POST
+    curl http://localhost:10080/api/hosts/ -d "name=cl01" -d "mac=08:00:27:26:7a:e7" -d "group_id=1" -X POST
 
 ### Connecting to Backend Ldap
 
@@ -71,8 +87,21 @@ Install Apache Directory Studio ([Download Link](http://directory.apache.org/stu
     Bind password: dhcpawn
     Encryption Method: No encryption
 
-### Development and deployment
+### Starting up the clients
 
-DHCPawn uses ([weber-backend](https://github.com/vmalloc/weber-backend)). Further instructions can be read there, but DHCPawn is set up to allow deployment to the virtual DHCP server by running:
+Clients are provided to test address allocation. Their MAC addresses are predefined in the Vagrantfile. To start up DHCP clients:
 
-    python manage.py deploy --dest=vagrant
+    vagrant up cl01
+    vagrant up cl02
+
+### Database migrations
+
+Migrations in DHCPawn use alembic. Running
+
+    python manage.py deploy
+
+will automatically migrate any database changes already in the migrations/ directory. To migrate new changes, run (with the environment variable SQLALCHEMY_DATABASE_URI properly set to your database):
+
+    python manage.py db revision
+
+Be sure to review the alembic migration file generated in migrations/ before deploying.
