@@ -9,9 +9,12 @@ class Host(db.Model):
     name = db.Column(db.String(255))
     mac = db.Column(db.String(100), unique=True)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'))
 
     def dn(self):
-        return 'cn=%s,%s' % (self.name, self.group.dn())
+        if self.group_id:
+            return 'cn=%s,%s' % (self.name, self.group.dn())
+        return 'cn=%s,ou=Hosts,%s' % (self.name, self.server.dn())
 
     def ldap_add(self):
         modlist = [('objectClass',['dhcpHost','top']),
@@ -72,6 +75,26 @@ class Server(db.Model):
     hostname = db.Column(db.String(255))
     groups = db.relationship('Group', backref='server', lazy='dynamic')
     subnets = db.relationship('Subnet', backref='server', lazy='dynamic')
+    hosts = db.relationship('Host', backref='server', lazy='dynamic')
+
+    def ldap_add(self):
+        pass
+        #TODO: set up ldap heirarchy:
+#[('dc=dhcpawn,dc=net', {'dc': ['dhcpawn'], 'objectClass': ['domain']}),
+# ('cn=dhcpsrv,dc=dhcpawn,dc=net',
+#  {'cn': ['dhcpsrv'],
+#   'dhcpServiceDN': ['cn=DHCP Config,cn=dhcpsrv,dc=dhcpawn,dc=net'],
+#   'objectClass': ['dhcpServer', 'top']}),
+# ('cn=DHCP Config,cn=dhcpsrv,dc=dhcpawn,dc=net',
+#  {'cn': ['DHCP Config'],
+#   'dhcpPrimaryDN': ['cn=dhcpsrv,dc=dhcpawn,dc=net'],
+#   'objectClass': ['dhcpOptions', 'dhcpService', 'top']}),
+# ('ou=Groups,cn=DHCP Config,cn=dhcpsrv,dc=dhcpawn,dc=net',
+#  {'objectClass': ['organizationalUnit', 'top'], 'ou': ['Groups']}),
+# ('ou=Subnets,cn=DHCP Config,cn=dhcpsrv,dc=dhcpawn,dc=net',
+#  {'objectClass': ['organizationalUnit', 'top'], 'ou': ['Groups', 'Subnets']}),
+# ('ou=Hosts,cn=DHCP Config,cn=dhcpsrv,dc=dhcpawn,dc=net',
+#  {'objectClass': ['organizationalUnit', 'top'], 'ou': ['Groups', 'Hosts']})]
 
     def dn(self):
         return 'cn=DHCP Config,cn=dhcpsrv,dc=%s,dc=%s' % (self.hostname.split('.')[0], self.hostname.split('.')[1])
