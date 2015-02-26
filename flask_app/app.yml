@@ -1,1 +1,17 @@
 app_name: dhcpawn
+
+# Internal LDAP configuration values
+# Default Manager LDAP User: cn=Manager,dc=dhcpawn,dc=net
+#
+#The domain prefix for ldap
+openldap_server_domain_name: dhcpawn.net
+#This is the password for admin for openldap
+openldap_server_rootpw: dhcpawn
+# Disable SSL for debuging purposes
+openldap_server_enable_ssl: false
+
+#The self signed ssl parameters
+openldap_server_country: US
+openldap_server_state: oregon
+openldap_server_location: portland
+openldap_server_organization: IT

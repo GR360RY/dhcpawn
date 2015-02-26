@@ -2,7 +2,7 @@ from flask import jsonify, request, abort
 from flask.views import MethodView
 
 from .app import app, ldap_obj
-from .models import db, Host, Group, Subnet, IP, Server
+from .models import db, Host, Group, Subnet, IP
 
 def get_or_404(model, id):
     rv = model.query.get(id)
@@ -13,16 +13,16 @@ def get_or_404(model, id):
 class HostListAPI(MethodView):
 
     def get(self):
+        print 'here'
         hosts = Host.query.all()
         return jsonify(dict(items=[host.config() for host in hosts]))
 
     def post(self):
-        if set(['name','mac','server_id']) > set(request.form.keys()):
-            abort(400, "Host requires name, mac, and server_id")
+        if set(['name','mac']) > set(request.form.keys()):
+            abort(400, "Host requires name, and mac")
         host = Host(name=request.form.get('name'),
                 mac=request.form.get('mac'),
-                group_id=request.form.get('group_id'),
-                server_id=request.form.get('server_id'))
+                group_id=request.form.get('group_id'))
         db.session.add(host)
         db.session.commit()
         host.ldap_add()
@@ -36,18 +36,15 @@ class HostAPI(MethodView):
 
     def put(self, host_id):
         host = get_or_404(Host, host_id)
-        host.ldap_delete()
+        # TODO: ldap update
         if 'name' in request.form:
             host.name = request.form.get('name')
         if 'mac' in request.form:
             host.mac = request.form.get('mac')
         if 'group_id' in request.form:
             host.group_id = request.form.get('group_id')
-        if 'server_id' in request.form:
-            host.server_id = request.form.get('server_id')
         db.session.add(host)
         db.session.commit()
-        host.ldap_add()
         return jsonify(host.config())
 
     def delete(self, host_id):
@@ -64,10 +61,9 @@ class GroupListAPI(MethodView):
         return jsonify(dict(items=[group.config() for group in groups]))
 
     def post(self):
-        if set(['name','server_id']) != set(request.form.keys()):
-            abort(400, "Group requires name and server_id")
-        group = Group(name=request.form.get('name'),
-                server_id=request.form.get('server_id'))
+        if set(['name']) != set(request.form.keys()):
+            abort(400, "Group requires name")
+        group = Group(name=request.form.get('name'))
         db.session.add(group)
         db.session.commit()
         group.ldap_add()
@@ -83,9 +79,6 @@ class GroupAPI(MethodView):
         group = get_or_404(Group, group_id)
         if 'name' in request.form:
             group.name = request.form.get('name')
-        if 'server_id' in request.form:
-            # update all hosts in group
-            group.server_id = request.form.get('server_id')
         db.session.add(group)
         db.session.commit()
         return jsonify(group.config())
@@ -99,31 +92,3 @@ class GroupAPI(MethodView):
         db.session.delete(group)
         db.session.commit()
         return jsonify(dict(items=[group.config() for group in Group.query.all()]))
-
-class ServerListAPI(MethodView):
-    def get(self):
-        servers = Server.query.all()
-        return jsonify(dict(items=[server.config() for server in servers]))
-
-    def post(self):
-        if set(['hostname']) != set(request.form.keys()):
-            abort(400, "Server requires hostname")
-        server = Server(hostname=request.form.get('hostname'))
-        db.session.add(server)
-        db.session.commit()
-        return jsonify(server.config())
-
-class ServerAPI(MethodView):
-
-    def get(self, server_id):
-        server = get_or_404(Server, server_id)
-        return jsonify(server.config())
-
-    def put(self, server_id):
-        server = get_or_404(Server, server_id)
-        # TODO: ldap_update
-        if hostname in request.form:
-            server.hostname = request.form.get('hostname')
-        db.session.add(server)
-        db.session.commit()
-        return jsonfiy(server.config())

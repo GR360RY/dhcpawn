@@ -18,11 +18,7 @@ app.config["SECRET_KEY"] = ""
 app.config['SQLALCHEMY_DATABASE_URI'] = os.path.expandvars(
     os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:////tmp/__demo_db.sqlite'))
 
-ldap_obj = ldap.initialize(os.path.expandvars(
-    os.environ.get('LDAP_DATABASE_URI','ldap://localhost:389')))
-ldap_obj.bind_s(os.environ.get('LDAP_AUTH_USER','cn=Manager,dc=dhcpawn,dc=net'),
-    os.environ.get('LDAP_AUTH_CRED','dhcpawn'),
-    os.environ.get('LDAP_AUTH_METHOD',ldap.AUTH_SIMPLE))
+app.config['LDAP_DATABASE_URI'] = os.path.expandvars(os.environ.get('LDAP_DATABASE_URI','ldap://localhost:389'))
 
 _CONF_D_PATH = os.environ.get('CONFIG_DIRECTORY', os.path.join(ROOT_DIR, "..", "conf.d"))
 
@@ -36,6 +32,10 @@ for yaml_path in configs:
         with open(yaml_path) as yaml_file:
             app.config.update(yaml.load(yaml_file))
 
+ldap_obj = ldap.initialize(app.config['LDAP_DATABASE_URI'])
+ldap_obj.bind_s('cn=Manager,dc=%s,dc=%s' % (app.config['openldap_server_domain_name'].split('.')[0],
+    app.config['openldap_server_domain_name'].split('.')[1]),
+    app.config['openldap_server_rootpw'], ldap.AUTH_SIMPLE)
 
 console_handler = logging.StreamHandler(sys.stderr)
 console_handler.setLevel(logging.DEBUG)

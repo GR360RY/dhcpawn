@@ -2,9 +2,8 @@ import requests
 import json
 
 def _setup(webapp):
-    webapp.post('/api/servers/', data={'hostname':'dhcpawn.net'})
-    webapp.post('/api/groups/', data={'name':'testgroup','server_id':1})
-    webapp.post('/api/hosts/', data={'name':'cl01','mac':'08:00:27:26:7a:e7', 'group_id':1,'server_id':1})
+    webapp.post('/api/groups/', data={'name':'testgroup'})
+    webapp.post('/api/hosts/', data={'name':'cl01','mac':'08:00:27:26:7a:e7','group_id':1})
 
 def test_create_objects(webapp):
     _setup(webapp)

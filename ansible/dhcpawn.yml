@@ -1,6 +1,6 @@
 ---
 - hosts: dhcpawn
   vars_files:
-    - ../dhcpawn.yml
+    - ../flask_app/app.yml
   roles:
     - dhcpawn

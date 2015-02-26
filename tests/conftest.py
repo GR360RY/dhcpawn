@@ -7,7 +7,7 @@ from flask.ext.loopback import FlaskLoopback
 from urlobject import URLObject as URL
 
 import pytest
-from flask_app import app, models
+from flask_app import app, models, ldap_utils
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -32,8 +32,8 @@ def webapp(request, db):
 def db(request):
     models.db.session.close()
     models.db.drop_all()
+    ldap_utils.drop_all()
     models.db.create_all()
-
 
 class Webapp(object):
 
