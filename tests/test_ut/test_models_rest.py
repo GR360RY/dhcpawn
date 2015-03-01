@@ -14,9 +14,13 @@ def test_create_objects(webapp):
 
 def test_edit_objects(webapp):
     _setup(webapp)
-    webapp.put('/api/hosts/1', data={'group_id':None})
+    webapp.put('/api/hosts/1', data={'group_id':'None'})
     host = webapp.get('/api/hosts/1')
     assert 'Hosts' in host['dn']
+    webapp.put('/api/hosts/1', data={'group_id':1})
+    webapp.put('/api/groups/1', data={'name':'newgroup'})
+    host = webapp.get('/api/hosts/1')
+    assert 'newgroup' in host['dn']
 
 def test_delete(webapp):
     _setup(webapp)

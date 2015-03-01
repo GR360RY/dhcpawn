@@ -36,15 +36,19 @@ class HostAPI(MethodView):
 
     def put(self, host_id):
         host = get_or_404(Host, host_id)
-        # TODO: ldap update
+        host.ldap_delete()
         if 'name' in request.form:
             host.name = request.form.get('name')
         if 'mac' in request.form:
             host.mac = request.form.get('mac')
         if 'group_id' in request.form:
-            host.group_id = request.form.get('group_id')
+            group_id = request.form.get('group_id')
+            if type(group_id) != int:
+                group_id = eval(group_id)
+            host.group_id = group_id
         db.session.add(host)
         db.session.commit()
+        host.ldap_add()
         return jsonify(host.config())
 
     def delete(self, host_id):
