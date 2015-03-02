@@ -40,7 +40,7 @@ def test_delete_host(webapp):
 
 # TODO: define required subnet fields
 def test_create_subnet(webapp):
-    webapp.post('/api/subnets/', data={'name':'test_subnet_00','netmask':'255.255.255.0',
+    webapp.post('/api/subnets/', data={'name':'test_subnet_00','netmask':22,
         'broadcast_address':'10.0.0.0','routers':'10.0.0.254'})
     subnets = webapp.get('/api/subnets/')
     assert len(hosts['items']) == 1
@@ -49,11 +49,11 @@ def test_create_subnet(webapp):
     assert len(subnet['pools']) == 0
 
 def test_update_subnet(webapp):
-    webapp.post('/api/subnets/', data={'name':'test_subnet_00','netmask':'255.255.255.0'})
-    webapp.put('/api/subnets/1', data={'name':'test_subnet_01','netmask':'255.255.252.0'})
+    webapp.post('/api/subnets/', data={'name':'test_subnet_00','netmask':22})
+    webapp.put('/api/subnets/1', data={'name':'test_subnet_01','netmask':22})
     subnet = webapp.get('/api/subnets/1')
     assert subnet['name'] == 'test_subnet_01'
-    assert subnet['netmask'] == '255.255.252.0'
+    assert subnet['netmask'] == 22
 
 def test_delete_subnet(webapp):
     webapp.post('/api/subnets/', data={'name':'test_subnet_00'})
