@@ -100,8 +100,9 @@ def test_create_subnet(webapp):
 def test_create_dynamic_pool(webapp):
     # ldap should be updated
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/pools/', data={'name':'test_pool_00','range_min':'10.100.100.200',
-        'range_max':'10.100.100.253','type':'dynamic','subnet_id':1})
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.100.100.200',
+        'ip_max':'10.100.100.253'})
+    webapp.post('/api/pools/', data={'name':'test_pool_00','iprange_id':1,'subnet_id':1})
     ldap_obj = _ldap_init(webapp)
     ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
         (_server_dn(webapp)), ldap.SCOPE_BASE)
@@ -114,8 +115,9 @@ def test_create_dynamic_pool(webapp):
 def test_create_static_pool(webapp):
     # ldap should not contain pool record
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/pools/', data={'name':'test_pool_00','range_min':'10.100.100.200',
-        'range_max':'10.100.100.253','type':'static','subnet_id':1})
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.100.100.200',
+        'ip_max':'10.100.100.253'})
+    webapp.post('/api/pools/', data={'name':'test_pool_00','iprange_id':1,'subnet_id':1})
     ldap_obj = _ldap_init(webapp)
     with pytest.raises(ldap.NO_SUCH_OBJECT):
         ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
@@ -124,8 +126,9 @@ def test_create_static_pool(webapp):
 def test_allocate_pool_ip(webapp):
     # address should be top IP entry from pool
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/pools/', data={'name':'test_pool_00','range_min':'10.100.100.200',
-        'range_max':'10.100.100.253','type':'static','subnet_id':1})
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.100.100.200',
+        'ip_max':'10.100.100.253'})
+    webapp.post('/api/pools/', data={'name':'test_pool_00','iprange_id':1,'subnet_id':1})
     webapp.post('/api/ips/', data={'pool_id':1})
     ip = webapp.get('/api/ips/1')
     assert ip['address'] == '10.100.100.253'
@@ -143,10 +146,10 @@ def test_host_static_ip(webapp):
 def test_allocate_static_ips(webapp):
     # mark 100 addresses in a static pool as in use, check that IP allocation comes after this pool
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/pools/', data={'name':'test_pool_00','range_min':'10.100.100.100',
-        'range_max':'10.100.100.250','type':'static','subnet_id':1})
-    webapp.put('/api/pools/1/allocate/', data={'number':100})
-    webapp.post('/api/ips/', data={'pool_id':1})
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.100.100.100',
+        'ip_max':'10.100.100.253','subnet_id':1})
+    webapp.put('/api/ipranges/1/allocate/', data={'number':100})
+    webapp.post('/api/ips/', data={'iprange_id':1})
     ip = webapp.get('/api/ips/1')
     assert ip['address'] == '10.100.100.149'
 

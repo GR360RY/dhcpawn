@@ -61,12 +61,37 @@ def test_delete_subnet(webapp):
     subnets = webapp.get('/api/subnets/')
     assert len(hosts['items']) == 0
 
+def test_create_iprange(webapp):
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.0.0.200','ip_max':'10.0.0.253',
+        'type':'static'})
+    ipranges = webapp.get('/api/ipranges')
+    assert len(ranges['items']) == 1
+    iprange = webapp.get('/api/iprange/1')
+    assert iprange['name'] == 'test_range_00'
+
+def test_update_iprange(webapp):
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.0.0.200','ip_max':'10.0.0.253',
+        'type':'static'})
+    iprange = webapp.get('/api/iprange/1')
+    assert iprange['type'] == 'static'
+    webapp.post('/api/subnets/', data={'name':'test_subnet_00'})
+    webapp.put('/api/iprange/1', data={'type':'dynamic','subnet_id':1})
+    iprange = webapp.get('/api/iprange/1')
+    assert iprange['type'] == 'dynamic'
+    assert iprange['subnet_id'] == 1
+
+def test_delete_iprange(webapp):
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.0.0.200','ip_max':'10.0.0.253'})
+    webapp.delete('/api/ipranges/1')
+    ipranges = webapp.get('/api/ipranges/')
+    assert len(ipranges['items']) == 1
+
 # TODO: define required pool fields
 def test_create_pool(webapp):
     webapp.post('/api/subnets/', data={'name':'test_subnet_00'})
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.0.0.200','ip_max':'10.0.0.253'})
     webapp.post('/api/pools/', data={'name':'test_pool_00','dns':'ns.test.com',
-        'max_lease_time':28800,'range_min':'10.0.0.200','range_max':'10.0.0.253',
-        'allow': 'unknown-clients','deny':'','type':'dynamic','subnet_id':1})
+        'max_lease_time':28800,'iprange_id':1,'allow': 'unknown-clients','deny':'','subnet_id':1})
     pools = webapp.get('/api/pools/')
     assert len(pools['items']) == 1
     pool = webapp.get('/api/pools/1')
@@ -76,9 +101,9 @@ def test_create_pool(webapp):
 def test_update_pool(webapp):
     webapp.post('/api/subnets/', data={'name':'test_subnet_00'})
     webapp.post('/api/subnets/', data={'name':'test_subnet_01'})
+    webapp.post('/api/ipranges/', data={'name':'test_range_00','ip_min':'10.0.0.200','ip_max':'10.0.0.253'})
     webapp.post('/api/pools/', data={'name':'test_pool_00','dns':'ns.test.com',
-        'max_lease_time':28800,'range_min':'10.0.0.200','range_max':'10.0.0.253',
-        'allow': 'unknown-clients','deny':'','type':'static','subnet_id':1})
+        'max_lease_time':28800,'iprange_id':1,'allow': 'unknown-clients','deny':'','subnet_id':1})
     webapp.put('/api/pools/1', data={'name':'test_pool_01','subnet_id':2})
     pool = webapp.get('/api/pools/1')
     assert pool['name'] == 'test_pool_01'
