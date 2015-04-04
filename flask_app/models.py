@@ -2,9 +2,19 @@ from .app import app, ldap_obj
 from .ldap_utils import server_dn
 from flask.ext.sqlalchemy import SQLAlchemy
 import ldap
+import ldap.modlist
+import json
 from ipaddr import IPAddress
 
 db = SQLAlchemy(app)
+
+def gen_modlist(obj_dict, options):
+    if options:
+        options = json.loads(options)
+        for option in options:
+            options[option] = [str(o) for o in options[option]]
+        obj_dict.update(options)
+    return obj_dict
 
 class Host(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -19,11 +29,22 @@ class Host(db.Model):
             return 'cn=%s,%s' % (self.name, self.group.dn())
         return 'cn=%s,ou=Hosts,%s' % (self.name, server_dn())
 
+    def modlist(self):
+        return gen_modlist(dict(objectClass=['dhcpHost','top'],
+                dhcpHWAddress=['ethernet %s' % str(self.mac)],
+                cn=str(self.name)), self.options)
+
+    def ldap_sync(self):
+        # undecided about using this
+        try:
+            host_ldap = ldap_obj.search_s(self.dn(), ldap.SCOPE_BASE)
+            if host_ldap[0][1] != dict(self.modlist()):
+                ldap_obj.modify_s(self.dn(), ldap.modlist.modifyModlist(host_ldap[0][1], dict(self.modlist())))
+        except ldap.NO_SUCH_OBJECT:
+            self.ldap_add()
+
     def ldap_add(self):
-        modlist = [('objectClass',['dhcpHost','top']),
-                ('dhcpHWAddress','ethernet %s' % str(self.mac)),
-                ('cn',str(self.name))]
-        ldap_obj.add_s(self.dn(), modlist)
+        ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
 
     def ldap_delete(self):
         ldap_obj.delete_s(self.dn())
@@ -33,7 +54,8 @@ class Host(db.Model):
                 dn = self.dn(),
                 name = self.name,
                 mac = self.mac,
-                group = self.group_id)
+                group = self.group_id,
+                options = json.loads(self.options) if self.options else None)
 
 class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,10 +66,12 @@ class Group(db.Model):
     def dn(self):
         return 'cn=%s,ou=Groups,%s' % (self.name, server_dn())
 
+    def modlist(self):
+        return gen_modlist(dict(objectClass=['dhcpGroup', 'top'],
+                cn=str(self.name)), self.options)
+
     def ldap_add(self):
-        modlist = [('objectClass', ['dhcpGroup', 'top']),
-                ('cn',str(self.name))]
-        ldap_obj.add_s(self.dn(), modlist)
+        ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
 
     def ldap_delete(self):
         ldap_obj.delete_s(self.dn())
@@ -56,7 +80,8 @@ class Group(db.Model):
         return dict(id = self.id,
                 dn = self.dn(),
                 name = self.name,
-                hosts = [host.id for host in self.hosts.all()])
+                hosts = [host.id for host in self.hosts.all()],
+                options = json.loads(self.options) if self.options else None)
 
 class Subnet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -71,14 +96,18 @@ class Subnet(db.Model):
     def dn(self):
         return 'cn=%s,ou=Subnets,%s' % (self.name, server_dn())
 
+    def modlist(self):
+        return gen_modlist(dict(objectClass=['dhcpSubnet', 'top'],
+                cn=str(self.name),
+                dhcpNetMask=str(self.netmask)), self.options)
+
     def ldap_add(self):
-        modlist = [('objectClass', ['dhcpSubnet', 'top']),
-                ('cn', str(self.name)),
-                ('dhcpNetmask', str(self.netmask))]
-        ldap_obj.add_s(self.dn(), modlist)
+        if self.deployed:
+            ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
 
     def ldap_delete(self):
-        ldap_obj.delete_s(self.dn())
+        if self.deployed:
+            ldap_obj.delete_s(self.dn())
 
     def config(self):
         return dict(id = self.id,
@@ -86,7 +115,7 @@ class Subnet(db.Model):
                 name = self.name,
                 netmask = self.netmask,
                 deployed = self.deployed,
-                options = self.options,
+                options = json.loads(self.options) if self.options else None,
                 range = self.range_id,
                 ips = [ip.id for ip in self.ips.all()],
                 pools = [pool.id for pool in self.pools.all()])

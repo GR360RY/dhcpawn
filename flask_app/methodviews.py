@@ -1,5 +1,6 @@
 from flask import jsonify, request, abort
 from flask.views import MethodView
+import json
 
 from .app import app, ldap_obj
 from .models import db, Host, Group, Subnet, IP, Range, Pool
@@ -25,16 +26,18 @@ def _id_eval(idstr):
 class HostListAPI(MethodView):
 
     def get(self):
-        print 'here'
         hosts = Host.query.all()
         return jsonify(dict(items=[host.config() for host in hosts]))
 
     def post(self):
         if any(key not in request.form for key in ['name','mac']):
             abort(400, "Host requires name and mac")
+        if Host.query.filter(Host.mac==request.form.get('mac')).all():
+            abort(400, "A host with this MAC already exists")
         host = Host(name=request.form.get('name'),
                 mac=request.form.get('mac'),
-                group_id=_id_eval(request.form.get('group')))
+                group_id=_id_eval(request.form.get('group')),
+                options=request.form.get('options'))
         db.session.add(host)
         db.session.commit()
         host.ldap_add()
@@ -55,6 +58,8 @@ class HostAPI(MethodView):
             host.mac = request.form.get('mac')
         if 'group' in request.form:
             host.group_id = _id_eval(request.form.get('group'))
+        if 'options' in request.form:
+            host.options = request.form.get('options')
         db.session.add(host)
         db.session.commit()
         host.ldap_add()
@@ -76,7 +81,8 @@ class GroupListAPI(MethodView):
     def post(self):
         if any(key not in request.form for key in ['name']):
             abort(400, "Group requires name")
-        group = Group(name=request.form.get('name'))
+        group = Group(name=request.form.get('name'),
+                options=request.form.get('options'))
         db.session.add(group)
         db.session.commit()
         group.ldap_add()
@@ -90,20 +96,32 @@ class GroupAPI(MethodView):
 
     def put(self, group_id):
         group = get_or_404(Group, group_id)
+        for host in group.hosts.all():
+            host.ldap_delete()
+        group.ldap_delete()
         if 'name' in request.form:
             group.name = request.form.get('name')
+        if 'options' in request.form:
+            group.options = request.form.get('options')
         db.session.add(group)
         db.session.commit()
+        group.ldap_add()
+        for host in group.hosts.all():
+            host.ldap_add()
         return jsonify(group.config())
 
     def delete(self, group_id):
         group = get_or_404(Group, group_id)
+        hosts = []
         for host in group.hosts.all():
             host.ldap_delete()
             host.group_id = None
+            hosts.append(host)
             db.session.add(host)
         db.session.delete(group)
         db.session.commit()
+        for host in hosts:
+            host.ldap_add()
         return jsonify(dict(items=[group.config() for group in Group.query.all()]))
 
 class SubnetListAPI(MethodView):
@@ -118,7 +136,7 @@ class SubnetListAPI(MethodView):
         subnet = Subnet(name=request.form.get('name'),
                 netmask=request.form.get('netmask'),
                 options=request.form.get('options'),
-                deployed=request.form.get('deployed'))
+                deployed=eval(request.form.get('deployed')))
         db.session.add(subnet)
         db.session.commit()
         subnet.ldap_add()
@@ -139,7 +157,7 @@ class SubnetAPI(MethodView):
         if 'deployed' in request.form:
             subnet.deployed = request.form.get('deployed')
         if 'options' in request.form:
-            subnet.options = request.form.get('subnet')
+            subnet.options = request.form.get('options')
         db.session.add(subnet)
         db.session.commit()
         return jsonify(subnet.config())
