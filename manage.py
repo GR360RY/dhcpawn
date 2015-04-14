@@ -109,14 +109,19 @@ def _run_unittest():
 
 
 @cli.command()
-def fulltest():
-    _run_fulltest()
+@click.argument('pytest_args', nargs=-1)
+def fulltest(pytest_args):
+    _run_fulltest(pytest_args)
 
 
 @requires_env("app", "develop")
 def _run_fulltest(extra_args=()):
-    subprocess.check_call([from_env_bin("py.test"), "tests"]
-                          + list(extra_args), cwd=from_project_root())
+    command = [from_env_bin("py.test")]
+    if extra_args:
+        command += list(extra_args)
+    else:
+        command += ["tests"]
+    subprocess.check_call(command, cwd=from_project_root())
 
 
 @cli.command('travis-test')
