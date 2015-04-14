@@ -87,7 +87,6 @@ def test_delete_group(webapp):
 
 def test_create_subnet(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22,
-        'deployed':'True',
         'options':'{"dhcpStatements": ["default-lease-time 120"], "dhcpOption": ["option routers 10.0.0.254", "option broadcast-address 10.100.100.255"]}'})
     ldap_obj = _ldap_init(webapp)
     ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
@@ -98,23 +97,86 @@ def test_create_subnet(webapp):
     assert 'option routers 10.0.0.254' in ldap_subnets[0][1]['dhcpOption']
     assert ldap_subnets[0][1]['dhcpStatements'] == ['default-lease-time 120']
 
-def test_create_dynamic_pool(webapp):
-    # ldap should be updated
+def test_host_static_ip(webapp):
+    # host record gets fixed-address dhcpStatement
+    webapp.post('/api/hosts/', data={'name':'test_host_00','mac':'08:00:27:26:7a:e7'})
+    webapp.post('/api/ips/', data={'address':'10.0.0.10','host':1})
+    ldap_obj = _ldap_init(webapp)
+    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert ldap_hosts[0][1]['cn'] == ['test_host_00']
+    assert ldap_hosts[0][1]['dhcpHWAddress'] == ['ethernet 08:00:27:26:7a:e7']
+    assert 'fixed-address 10.0.0.10' in ldap_hosts[0][1]['dhcpStatements']
+
+def test_release_static_ip(webapp):
+    webapp.post('/api/hosts/', data={'name':'test_host_00','mac':'08:00:27:26:7a:e7'})
+    webapp.post('/api/ips/', data={'address':'10.0.0.10','host':1})
+    webapp.put('/api/ips/1', data={'host':None})
+    ldap_obj = _ldap_init(webapp)
+    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert ldap_hosts[0][1]['cn'] == ['test_host_00']
+    assert ldap_hosts[0][1]['dhcpHWAddress'] == ['ethernet 08:00:27:26:7a:e7']
+    assert 'dhcpStatements' not in ldap_hosts[0][1]
+
+def test_allocate_dynamic_range(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.200',
-        'ip_max':'10.100.100.253'})
-    webapp.post('/api/pools/', data={'name':'test_pool_00','range':1,'subnet':1})
+    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+        'max':'10.100.100.253','subnet':1,'type':'dynamic'})
+    subnet = webapp.get('/api/subnets/1')
+    ldap_obj = _ldap_init(webapp)
+    ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert 'range 10.100.100.100 10.100.100.253' in ldap_subnets[0][1]['dhcpRange']
+
+def test_update_dynamic_range(webapp):
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
+    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+        'max':'10.100.100.253','subnet':1,'type':'dynamic'})
+    webapp.put('/api/ranges/1', data={'min':'10.100.100.4'})
+    subnet = webapp.get('/api/subnets/1')
+    ldap_obj = _ldap_init(webapp)
+    ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert 'range 10.100.100.4 10.100.100.253' in ldap_subnets[0][1]['dhcpRange']
+
+def test_create_dynamic_pool(webapp):
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
+    webapp.post('/api/ranges/', data={'type':'dynamic','min':'10.100.100.200','max':'10.100.100.253'})
+    webapp.post('/api/pools/', data={'name':'test_pool_00','range':1,'subnet':1,
+        'options':'{"dhcpStatements": ["default-lease-time 120"], "dhcpOption": ["option routers 10.0.0.254", "option broadcast-address 10.100.100.255"]}'})
     ldap_obj = _ldap_init(webapp)
     ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
         (_server_dn(webapp)), ldap.SCOPE_BASE)
     assert len(ldap_pools) == 1
     assert ldap_pools[0][1]['cn'] == ['test_pool_00']
     assert 'dhcpPool' in ldap_pools[0][1]['objectClass']
-    assert ldap_pools[0][1]['dhcpRange'] == ['10.100.100.200 10.100.100.253']
-    assert ldap_pools[0][1]['dhcpOption'] == ['broadcast-address 10.100.100.255']
+    assert ldap_pools[0][1]['dhcpRange'] == ['range 10.100.100.200 10.100.100.253']
+    assert 'option broadcast-address 10.100.100.255' in ldap_pools[0][1]['dhcpOption']
+
+def test_move_dynamic_pool(webapp):
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
+    webapp.post('/api/ranges/', data={'type':'dynamic','min':'10.100.100.200','max':'10.100.100.253'})
+    webapp.post('/api/pools/', data={'name':'test_pool_00','range':1,'subnet':1})
+    webapp.post('/api/subnets/', data={'name':'10.100.100.200','netmask':22})
+    webapp.put('/api/pools/1', data={'subnet':2})
+    ldap_obj = _ldap_init(webapp)
+    ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.200,ou=Subnets,%s' %
+        (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_pools) == 1
+    assert ldap_pools[0][1]['cn'] == ['test_pool_00']
+    with pytest.raises(ldap.NO_SUCH_OBJECT):
+        ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
+            (_server_dn(webapp)), ldap.SCOPE_BASE)
+
+def test_allocate_static_range(webapp):
+    # mark 100 addresses in a static range, check that IP allocation comes after this pool
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
+    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.100',
+        'ip_max':'10.100.100.253','subnet':1,'type':'static'})
+    webapp.put('/api/ranges/1/allocate/', data={'number':100})
+    webapp.post('/api/ips/', data={'range':1})
+    ip = webapp.get('/api/ips/1')
+    assert ip['address'] == '10.100.100.149'
 
 def test_create_static_pool(webapp):
-    # ldap should not contain pool record
+    # TODO: reconsider this test
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
     webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.200',
         'ip_max':'10.100.100.253'})
@@ -133,65 +195,3 @@ def test_allocate_pool_ip(webapp):
     webapp.post('/api/ips/', data={'pool':1})
     ip = webapp.get('/api/ips/1')
     assert ip['address'] == '10.100.100.253'
-
-def test_host_static_ip(webapp):
-    # host record gets fixed-address dhcpStatement
-    webapp.post('/api/hosts/', data={'name':'test_host_00','mac':'08:00:27:26:7a:e7'})
-    webapp.post('/api/ips/', data={'address':'10.0.0.10','host':1})
-    ldap_obj = _ldap_init(webapp)
-    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
-    assert ldap_hosts[0][1]['cn'] == ['test_host_00']
-    assert ldap_hosts[0][1]['dhcpHWAddress'] == ['ethernet 08:00:27:26:7a:e7']
-    assert ldap_hosts[0][1]['dhcpStatement'] == ['fixed-address 10.0.0.10']
-
-def test_allocate_static_ips(webapp):
-    # mark 100 addresses in a static pool as in use, check that IP allocation comes after this pool
-    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.100',
-        'ip_max':'10.100.100.253','subnet':1})
-    webapp.put('/api/ranges/1/allocate/', data={'number':100})
-    webapp.post('/api/ips/', data={'range':1})
-    ip = webapp.get('/api/ips/1')
-    assert ip['address'] == '10.100.100.149'
-
-def test_postgres_sync(webapp):
-    # create LDAP group, host, and subnet entries manually and check for them in postgres
-    ldap_obj = _ldap_init(webapp)
-    modlist = [('objectClass',['dhcpHost','top']),('dhcpHWAddress','ethernet 08:00:27:26:7a:e7'),
-            ('cn','test_host_00')]
-    ldap_obj.add_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), modlist)
-    modlist = [('objectClass',['dhcpGroup','top']),('cn','test_group_00')]
-    ldap_obj.add_s('cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), modlist)
-    modlist = [('objectClass',['dhcpOptions','dhcpSubnet','top']),
-            ('dhcpOption',['broadcast-address 10.100.100.255']),
-            ('cn','10.100.100.0'),('dhcpNetMask',22)]
-    ldap_obj.add_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), modlist)
-    webapp.post('/api/sync/')
-    host = webapp.get('/api/hosts/1')
-    assert host['name'] == 'test_host_00'
-    assert host['mac_address'] == '08:00:27:26:7a:e7'
-    group = webapp.get('/api/groups/1')
-    assert group['name'] == 'test_group_00'
-    subnet = webapp.get('/api/subnets/1')
-    assert subnet['name'] == '10.100.100.0'
-    assert subnet['netmask'] == 22
-    assert subnet['broadcast_address'] == '10.100.100.255'
-
-def test_ldap_sync(webapp):
-    # create postgres group, host, and subnet entries, delete their LDAP equivalents, and recheck for them in LDAP
-    webapp.post('/api/groups/', data={'name':'test_group_00'})
-    webapp.post('/api/hosts/', data={'name':'test_host_00','mac':'08:00:27:26:7a:e7'})
-    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    ldap_obj = _ldap_init(webapp)
-    ldap_obj.delete_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)))
-    ldap_obj.delete_s('cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)))
-    ldap_obj.delete_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)))
-    webapp.post('/api/sync/')
-    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
-    assert ldap_hosts[0][1]['cn'] == ['test_host_00']
-    assert ldap_hosts[0][1]['dhcpHWAddress'] == ['ethernet 08:00:27:26:7a:e7']
-    ldap_groups = ldap_obj.search_s('cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
-    assert ldap_groups[0][1]['cn'] == ['test_group_00']
-    ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
-    assert ldap_subnets[0][1]['cn'] == ['10.100.100.0']
-    assert ldap_subnets[0][1]['netmask'] == 22

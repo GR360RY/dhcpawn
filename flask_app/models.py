@@ -16,12 +16,35 @@ def gen_modlist(obj_dict, options):
         obj_dict.update(options)
     return obj_dict
 
-class Host(db.Model):
+class LDAPModel(db.Model):
+    __abstract__ = True
+
+    def dn(self):
+        return ''
+
+    def modlist(self):
+        return dict()
+
+    def ldap_add(self):
+        ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
+
+    def ldap_modify(self):
+        try:
+            objs = ldap_obj.search_s(self.dn(), ldap.SCOPE_BASE)
+            if objs[0][1] != dict(self.modlist()):
+                ldap_obj.modify_s(self.dn(), ldap.modlist.modifyModlist(objs[0][1], dict(self.modlist())))
+        except ldap.NO_SUCH_OBJECT:
+            self.ldap_add()
+
+    def ldap_delete(self):
+        ldap_obj.delete_s(self.dn())
+
+class Host(LDAPModel):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     mac = db.Column(db.String(100), unique=True)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
-    ip = db.relationship('IP', backref='group', uselist=False)
+    ip = db.relationship('IP', backref='host', uselist=False)
     options = db.Column(db.Text)
 
     def dn(self):
@@ -30,24 +53,16 @@ class Host(db.Model):
         return 'cn=%s,ou=Hosts,%s' % (self.name, server_dn())
 
     def modlist(self):
+        options = self.options
+        if self.ip:
+            options = json.loads(self.options) if self.options else {}
+            if not options.get('dhcpStatements'):
+                options['dhcpStatements'] = []
+            options['dhcpStatements'] += ['fixed-address %s' % (self.ip.address)]
+            options = json.dumps(options)
         return gen_modlist(dict(objectClass=['dhcpHost','top'],
                 dhcpHWAddress=['ethernet %s' % str(self.mac)],
-                cn=str(self.name)), self.options)
-
-    def ldap_sync(self):
-        # undecided about using this
-        try:
-            host_ldap = ldap_obj.search_s(self.dn(), ldap.SCOPE_BASE)
-            if host_ldap[0][1] != dict(self.modlist()):
-                ldap_obj.modify_s(self.dn(), ldap.modlist.modifyModlist(host_ldap[0][1], dict(self.modlist())))
-        except ldap.NO_SUCH_OBJECT:
-            self.ldap_add()
-
-    def ldap_add(self):
-        ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
-
-    def ldap_delete(self):
-        ldap_obj.delete_s(self.dn())
+                cn=str(self.name)), options)
 
     def config(self):
         return dict(id = self.id,
@@ -57,7 +72,7 @@ class Host(db.Model):
                 group = self.group_id,
                 options = json.loads(self.options) if self.options else None)
 
-class Group(db.Model):
+class Group(LDAPModel):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     hosts = db.relationship('Host', backref='group', lazy='dynamic')
@@ -70,12 +85,6 @@ class Group(db.Model):
         return gen_modlist(dict(objectClass=['dhcpGroup', 'top'],
                 cn=str(self.name)), self.options)
 
-    def ldap_add(self):
-        ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
-
-    def ldap_delete(self):
-        ldap_obj.delete_s(self.dn())
-
     def config(self):
         return dict(id = self.id,
                 dn = self.dn(),
@@ -83,11 +92,10 @@ class Group(db.Model):
                 hosts = [host.id for host in self.hosts.all()],
                 options = json.loads(self.options) if self.options else None)
 
-class Subnet(db.Model):
+class Subnet(LDAPModel):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     netmask = db.Column(db.Integer)
-    deployed = db.Column(db.Boolean,default=False)
     options = db.Column(db.Text)
     ips = db.relationship('IP', backref='subnet', lazy='dynamic')
     range_id = db.Column(db.Integer, db.ForeignKey('range.id'))
@@ -97,24 +105,18 @@ class Subnet(db.Model):
         return 'cn=%s,ou=Subnets,%s' % (self.name, server_dn())
 
     def modlist(self):
-        return gen_modlist(dict(objectClass=['dhcpSubnet', 'top'],
+        mod_dict = dict(objectClass=['dhcpSubnet', 'top'],
                 cn=str(self.name),
-                dhcpNetMask=str(self.netmask)), self.options)
-
-    def ldap_add(self):
-        if self.deployed:
-            ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
-
-    def ldap_delete(self):
-        if self.deployed:
-            ldap_obj.delete_s(self.dn())
+                dhcpNetMask=str(self.netmask))
+        if self.range:
+            mod_dict.update(dict(dhcpRange=[str('range %s %s' % (self.range.min, self.range.max))]))
+        return gen_modlist(mod_dict, self.options)
 
     def config(self):
         return dict(id = self.id,
                 dn = self.dn(),
                 name = self.name,
                 netmask = self.netmask,
-                deployed = self.deployed,
                 options = json.loads(self.options) if self.options else None,
                 range = self.range_id,
                 ips = [ip.id for ip in self.ips.all()],
@@ -128,12 +130,16 @@ class IP(db.Model):
     host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
 
     def ldap_add(self):
-        # TODO
-        pass
+        if self.host:
+            self.host.ldap_modify()
 
     def ldap_delete(self):
-        # TODO
-        pass
+        if self.host:
+            host = self.host
+            host.ip = None
+            db.session.add(host)
+            db.session.commit()
+            host.ldap_modify()
 
     def config(self):
         return dict(id = self.id,
@@ -154,14 +160,16 @@ class Range(db.Model):
     pool = db.relationship('Pool', backref='range', uselist=False)
 
     def ldap_add(self):
-        if self.type == 'dynamic':
-            # TODO
-            pass
+        if self.type == 'dynamic' and self.subnet:
+            self.subnet.ldap_modify()
 
     def ldap_delete(self):
-        if self.type == 'dynamic':
-            # TODO
-            pass
+        if self.type == 'dynamic' and self.subnet:
+            subnet = self.subnet
+            subnet.ip = None
+            db.session.add(subnet)
+            db.session.commit()
+            subnet.ldap_modify()
 
     def config(self):
         return dict(id = self.id,
@@ -171,7 +179,7 @@ class Range(db.Model):
                 subnet = self.subnet.id if self.subnet else None,
                 pool = self.pool.id if self.pool else None)
 
-class Pool(db.Model):
+class Pool(LDAPModel):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     subnet_id = db.Column(db.Integer, db.ForeignKey('subnet.id'))
@@ -181,14 +189,12 @@ class Pool(db.Model):
     def dn(self):
         return 'cn=%s,%s' % (self.name, self.subnet.dn())
 
-    def ldap_add(self):
-        modlist = [('objectClass',['dhcpPool','top']),
-                ('cn', str(self.name)),
-                ('dhcpRange', str('%s %s' % (self.range.min, self.range.max)))]
-        ldap_obj.add_s(self.dn(), modlist)
-
-    def ldap_delete(self):
-        ldap_obj.delete_s(self.dn())
+    def modlist(self):
+        # range is required
+        mod_dict = dict(objectClass=['dhcpPool', 'top'],
+                cn=str(self.name),
+                dhcpRange=[str('range %s %s' % (self.range.min, self.range.max))])
+        return gen_modlist(mod_dict, self.options)
 
     def config(self):
         return dict(id = self.id,

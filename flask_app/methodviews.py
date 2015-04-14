@@ -135,8 +135,7 @@ class SubnetListAPI(MethodView):
             abort(400, "Subnet requires name and netmask")
         subnet = Subnet(name=request.form.get('name'),
                 netmask=request.form.get('netmask'),
-                options=request.form.get('options'),
-                deployed=eval(request.form.get('deployed')))
+                options=request.form.get('options'))
         db.session.add(subnet)
         db.session.commit()
         subnet.ldap_add()
@@ -154,8 +153,6 @@ class SubnetAPI(MethodView):
             subnet.name = request.form.get('name')
         if 'netmask' in request.form:
             subnet.netmask = request.form.get('netmask')
-        if 'deployed' in request.form:
-            subnet.deployed = request.form.get('deployed')
         if 'options' in request.form:
             subnet.options = request.form.get('options')
         db.session.add(subnet)
@@ -182,9 +179,9 @@ class IPListAPI(MethodView):
         if any(key not in request.form for key in ['address']):
             abort(400, "IP requires address")
         ip = IP(address=request.form.get('address'),
-                subnet_id=request.form.get('subnet_id'),
-                range_id=request.form.get('range_id'),
-                host_id=request.form.get('host_id'))
+                subnet_id=request.form.get('subnet'),
+                range_id=request.form.get('range'),
+                host_id=request.form.get('host'))
         db.session.add(ip)
         db.session.commit()
         ip.ldap_add()
@@ -197,8 +194,8 @@ class IPAPI(MethodView):
         return jsonify(ip.config())
 
     def put(self, ip_id):
-        # TODO: ldap update
         ip = get_or_404(IP, ip_id)
+        ip.ldap_delete()
         if 'address' in request.form:
             ip.address = request.form.get('address')
         if 'subnet' in request.form:
@@ -209,6 +206,7 @@ class IPAPI(MethodView):
             ip.host_id = request.form.get('host')
         db.session.add(ip)
         db.session.commit()
+        ip.ldap_add()
         return jsonify(ip.config())
 
     def delete(self, ip_id):
@@ -244,6 +242,7 @@ class RangeAPI(MethodView):
 
     def put(self, range_id):
         ip_range = get_or_404(Range, range_id)
+        ip_range.ldap_delete()
         if 'type' in request.form:
             ip_range.type = request.form.get('type')
         if 'min' in request.form:
@@ -256,6 +255,7 @@ class RangeAPI(MethodView):
             ip_range.pool = _get_or_none(Pool,request.form.get('pool'))
         db.session.add(ip_range)
         db.session.commit()
+        ip_range.ldap_add()
         return jsonify(ip_range.config())
 
     def delete(self, range_id):
@@ -291,6 +291,7 @@ class PoolAPI(MethodView):
 
     def put(self, pool_id):
         pool = get_or_404(Pool, pool_id)
+        pool.ldap_delete()
         if 'name' in request.form:
             pool.name = request.form.get('name')
         if 'subnet' in request.form:
@@ -299,6 +300,7 @@ class PoolAPI(MethodView):
             pool.range_id = request.form.get('range')
         db.session.add(pool)
         db.session.commit()
+        pool.ldap_add()
         return jsonify(pool.config())
 
     def delete(self, pool_id):
