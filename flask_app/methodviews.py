@@ -1,5 +1,6 @@
 from flask import jsonify, request, abort
 from flask.views import MethodView
+from ipaddr import IPv4Address
 import json
 
 from .app import app, ldap_obj
@@ -176,9 +177,28 @@ class IPListAPI(MethodView):
         return jsonify(dict(items=[ip.config() for ip in ips]))
 
     def post(self):
-        if any(key not in request.form for key in ['address']):
-            abort(400, "IP requires address")
-        ip = IP(address=request.form.get('address'),
+        if all(key not in request.form for key in ['address','range']):
+            abort(400, "IP requires address or range")
+        address = request.form.get('address')
+        existing_ips = IP.query.filter(IP.address==address).all()
+        if existing_ips:
+            abort(400, "This IP address is already allocated")
+        range_id = request.form.get('range')
+        if range_id:
+            iprange = get_or_404(Range, range_id)
+            if iprange.type == 'dynamic':
+                abort(400, "Provided dynamic range, and IPs cannot be allocated in a dynamic range")
+            if address:
+                if not iprange.contains(IPv4Address(request.form.get('address'))):
+                    abort(400, "IP address not in provided range")
+            else:
+                address = iprange.allocate(1).compressed
+        else:
+            ip = IPv4Address(address)
+            existing_ranges = Range.query.filter(Range.min<=ip, Range.max>=ip, type=='dynamic').all()
+            if existing_ranges:
+                abort(400, "IP address conflicts with dynamic range: %s" % (existing_ranges[0].id))
+        ip = IP(address=address,
                 subnet_id=request.form.get('subnet'),
                 range_id=request.form.get('range'),
                 host_id=request.form.get('host'))
@@ -195,15 +215,13 @@ class IPAPI(MethodView):
 
     def put(self, ip_id):
         ip = get_or_404(IP, ip_id)
+        if request.form.get('address') or request.form.get('range'):
+            abort(400, "IP POST requests only accept host and subnet IDs")
         ip.ldap_delete()
-        if 'address' in request.form:
-            ip.address = request.form.get('address')
-        if 'subnet' in request.form:
-            ip.subnet_id = request.form.get('subnet')
-        if 'range' in request.form:
-            ip.range_id = request.form.get('range')
         if 'host' in request.form:
             ip.host_id = request.form.get('host')
+        if 'subnet' in request.form:
+            ip.subnet_id = request.form.get('subnet')
         db.session.add(ip)
         db.session.commit()
         ip.ldap_add()

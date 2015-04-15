@@ -1,19 +1,7 @@
 import ldap
 import requests
 import pytest
-
-def _server_dn(webapp):
-    return 'cn=DHCP Config,cn=dhcpsrv,dc=%s,dc=%s' % (
-            webapp.app.config['openldap_server_domain_name'].split('.')[0],
-            webapp.app.config['openldap_server_domain_name'].split('.')[1])
-
-def _ldap_init(webapp):
-    ldap_obj = ldap.initialize(webapp.app.config['LDAP_DATABASE_URI'])
-    ldap_obj.bind_s('cn=Manager,dc=%s,dc=%s' % (
-        webapp.app.config['openldap_server_domain_name'].split('.')[0],
-        webapp.app.config['openldap_server_domain_name'].split('.')[1]),
-        webapp.app.config['openldap_server_rootpw'], ldap.AUTH_SIMPLE)
-    return ldap_obj
+from .utils import _server_dn, _ldap_init
 
 def test_create_host(webapp):
     webapp.post('/api/hosts/', data={'name':'test_host_00','mac':'08:00:27:26:7a:e7'})
@@ -98,7 +86,6 @@ def test_create_subnet(webapp):
     assert ldap_subnets[0][1]['dhcpStatements'] == ['default-lease-time 120']
 
 def test_host_static_ip(webapp):
-    # host record gets fixed-address dhcpStatement
     webapp.post('/api/hosts/', data={'name':'test_host_00','mac':'08:00:27:26:7a:e7'})
     webapp.post('/api/ips/', data={'address':'10.0.0.10','host':1})
     ldap_obj = _ldap_init(webapp)
@@ -164,34 +151,3 @@ def test_move_dynamic_pool(webapp):
     with pytest.raises(ldap.NO_SUCH_OBJECT):
         ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
             (_server_dn(webapp)), ldap.SCOPE_BASE)
-
-def test_allocate_static_range(webapp):
-    # mark 100 addresses in a static range, check that IP allocation comes after this pool
-    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.100',
-        'ip_max':'10.100.100.253','subnet':1,'type':'static'})
-    webapp.put('/api/ranges/1/allocate/', data={'number':100})
-    webapp.post('/api/ips/', data={'range':1})
-    ip = webapp.get('/api/ips/1')
-    assert ip['address'] == '10.100.100.149'
-
-def test_create_static_pool(webapp):
-    # TODO: reconsider this test
-    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.200',
-        'ip_max':'10.100.100.253'})
-    webapp.post('/api/pools/', data={'name':'test_pool_00','range':1,'subnet':1})
-    ldap_obj = _ldap_init(webapp)
-    with pytest.raises(ldap.NO_SUCH_OBJECT):
-        ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
-            (_server_dn(webapp)), ldap.SCOPE_BASE)
-
-def test_allocate_pool_ip(webapp):
-    # address should be top IP entry from pool
-    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.200',
-        'ip_max':'10.100.100.253'})
-    webapp.post('/api/pools/', data={'name':'test_pool_00','range':1,'subnet':1})
-    webapp.post('/api/ips/', data={'pool':1})
-    ip = webapp.get('/api/ips/1')
-    assert ip['address'] == '10.100.100.253'

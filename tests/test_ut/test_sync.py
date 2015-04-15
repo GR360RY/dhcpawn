@@ -1,7 +1,7 @@
 import ldap
 import requests
 import pytest
-from .test_ldap import _server_dn, _ldap_init
+from .utils import _server_dn, _ldap_init
 
 def test_postgres_sync(webapp):
     # create LDAP group, host, and subnet entries manually and check for them in postgres

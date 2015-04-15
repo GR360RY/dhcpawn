@@ -1,6 +1,7 @@
 from .app import app, ldap_obj
 from .ldap_utils import server_dn
 from flask.ext.sqlalchemy import SQLAlchemy
+from sqlalchemy_utils import IPAddressType
 import ldap
 import ldap.modlist
 import json
@@ -124,7 +125,7 @@ class Subnet(LDAPModel):
 
 class IP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    address = db.Column(db.String(255))
+    address = db.Column(IPAddressType)
     subnet_id = db.Column(db.Integer, db.ForeignKey('subnet.id'))
     range_id = db.Column(db.Integer, db.ForeignKey('range.id'))
     host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
@@ -143,19 +144,16 @@ class IP(db.Model):
 
     def config(self):
         return dict(id = self.id,
-                address = self.address,
+                address = self.address.compressed,
                 subnet = self.subnet_id,
                 range = self.range_id,
                 host = self.host_id)
 
-    def as_ip(self):
-        return IPAddress(self.address)
-
 class Range(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(255))
-    min = db.Column(db.String(255))
-    max = db.Column(db.String(255))
+    min = db.Column(IPAddressType)
+    max = db.Column(IPAddressType)
     subnet = db.relationship('Subnet', backref='range', uselist=False)
     pool = db.relationship('Pool', backref='range', uselist=False)
 
@@ -171,11 +169,18 @@ class Range(db.Model):
             db.session.commit()
             subnet.ldap_modify()
 
+    def allocate(self):
+        # return the first IP address in the range, from the top, without conflict
+        return 0
+
+    def contains(self, ip):
+        return ip >= self.min and ip <= self.max
+
     def config(self):
         return dict(id = self.id,
                 type = self.type,
-                min = self.min,
-                max = self.max,
+                min = self.min.compressed,
+                max = self.max.compressed,
                 subnet = self.subnet.id if self.subnet else None,
                 pool = self.pool.id if self.pool else None)
 
