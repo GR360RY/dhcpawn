@@ -106,22 +106,12 @@ def test_release_static_ip(webapp):
 
 def test_allocate_dynamic_range(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
-        'max':'10.100.100.253','subnet':1,'type':'dynamic'})
+    webapp.post('/api/ranges/', data={'min':'10.100.100.100','max':'10.100.100.253',
+        'subnet':1,'type':'dynamic'})
     subnet = webapp.get('/api/subnets/1')
     ldap_obj = _ldap_init(webapp)
     ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
     assert 'range 10.100.100.100 10.100.100.253' in ldap_subnets[0][1]['dhcpRange']
-
-def test_update_dynamic_range(webapp):
-    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
-        'max':'10.100.100.253','subnet':1,'type':'dynamic'})
-    webapp.put('/api/ranges/1', data={'min':'10.100.100.4'})
-    subnet = webapp.get('/api/subnets/1')
-    ldap_obj = _ldap_init(webapp)
-    ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
-    assert 'range 10.100.100.4 10.100.100.253' in ldap_subnets[0][1]['dhcpRange']
 
 def test_create_dynamic_pool(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})

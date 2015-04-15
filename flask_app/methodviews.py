@@ -195,12 +195,17 @@ class IPListAPI(MethodView):
                 address = iprange.allocate(1).compressed
         else:
             ip = IPv4Address(address)
-            existing_ranges = Range.query.filter(Range.min<=ip, Range.max>=ip, type=='dynamic').all()
-            if existing_ranges:
-                abort(400, "IP address conflicts with dynamic range: %s" % (existing_ranges[0].id))
+            for iprange in Range.query.all():
+                if iprange.contains(ip):
+                    if iprange.type == 'dynamic':
+                        abort(400, "IP address conflicts with dynamic range %s" % (iprange.id))
+                    if iprange.type == 'static':
+                        if range_id:
+                            abort(400, "Both ranges %s and %s contain IP" % (range_id, iprange.id))
+                        range_id = iprange.id
         ip = IP(address=address,
                 subnet_id=request.form.get('subnet'),
-                range_id=request.form.get('range'),
+                range_id=range_id,
                 host_id=request.form.get('host'))
         db.session.add(ip)
         db.session.commit()
@@ -242,6 +247,11 @@ class RangeListAPI(MethodView):
     def post(self):
         if any(key not in request.form for key in ['type','min','max']):
             abort(400, "Range requires a type, min, and max")
+        ipmin = IPv4Address(request.form.get('min'))
+        ipmax = IPv4Address(request.form.get('max'))
+        for iprange in Range.query.all():
+            if iprange.contains(ipmin) or iprange.contains(ipmax):
+                abort(400, "Range overlaps with existing ranges %s" % (iprange.id))
         ip_range = Range(type=request.form.get('type'),
                 min=request.form.get('min'),
                 max=request.form.get('max'),
@@ -263,10 +273,6 @@ class RangeAPI(MethodView):
         ip_range.ldap_delete()
         if 'type' in request.form:
             ip_range.type = request.form.get('type')
-        if 'min' in request.form:
-            ip_range.min = request.form.get('min')
-        if 'max' in request.form:
-            ip_range.max = request.form.get('max')
         if 'subnet' in request.form:
             ip_range.subnet = _get_or_none(Subnet,request.form.get('subnet'))
         if 'pool' in request.form:

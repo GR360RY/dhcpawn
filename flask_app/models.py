@@ -156,6 +156,7 @@ class Range(db.Model):
     max = db.Column(IPAddressType)
     subnet = db.relationship('Subnet', backref='range', uselist=False)
     pool = db.relationship('Pool', backref='range', uselist=False)
+    ips = db.relationship('IP', backref='range')
 
     def ldap_add(self):
         if self.type == 'dynamic' and self.subnet:

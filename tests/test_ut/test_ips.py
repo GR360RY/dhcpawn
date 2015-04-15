@@ -14,26 +14,34 @@ def test_ip_address_conflict(webapp):
 
 def test_ip_conflict_with_dynamic_range(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+    iprange = webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.80',
         'max':'10.100.100.253','subnet':1,'type':'dynamic'})
+    assert iprange['min'] == '10.100.100.80'
     with pytest.raises(requests.HTTPError):
         webapp.post('/api/ips/', data={'address': '10.100.100.101'})
 
 def test_range_conflict(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.80',
+    iprange = webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.80',
         'max':'10.100.100.150','subnet':1,'type':'static'})
-    with pytest.raises(request.HTTPError):
+    with pytest.raises(requests.HTTPError):
         webapp.post('/api/ranges/', data={'name':'test_range_01','min':'10.100.100.0',
-            'max':'10.100.100.100','subnet':1,'type':'static'})
-    with pytest.raises(request.HTTPError):
+            'max':'10.100.100.90','subnet':1,'type':'dynamic'})
+    with pytest.raises(requests.HTTPError):
         webapp.post('/api/ranges/', data={'name':'test_range_02','min':'10.100.100.100',
             'max':'10.100.100.253','subnet':1,'type':'static'})
 
+def test_auto_static_ip_ranging(webapp):
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
+    iprange = webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+        'max':'10.100.100.253','subnet':1,'type':'static'})
+    ip = webapp.post('/api/ips/', data={'address':'10.100.100.253'})
+    assert ip['range'] == 1
+
 def test_ip_range_allocation(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.100',
-        'ip_max':'10.100.100.253','subnet':1,'type':'static'})
+    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+        'max':'10.100.100.253','subnet':1,'type':'static'})
     webapp.post('/api/ips/', data={'range':1})
     ip = webapp.get('/api/ips/1')
     assert ip['address'] == '10.100.100.253'
@@ -41,8 +49,8 @@ def test_ip_range_allocation(webapp):
 def test_mass_ip_allocation(webapp):
     # mark 100 addresses in a static range, check that IP allocation comes after this pool
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.100',
-        'ip_max':'10.100.100.253','subnet':1,'type':'static'})
+    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+        'max':'10.100.100.253','subnet':1,'type':'static'})
     webapp.put('/api/ranges/1/allocate/', data={'number':100})
     ips = webapp.get('/api/ips/')
     assert len(ips['items']) == 100
@@ -56,8 +64,8 @@ def test_mass_ip_allocation(webapp):
 def test_holey_ip_allocation(webapp):
     # make a random gap in a range, make sure allocation fills it
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.100',
-        'ip_max':'10.100.100.253','subnet':1,'type':'static'})
+    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+        'max':'10.100.100.253','subnet':1,'type':'static'})
     webapp.put('/api/ranges/1/allocate/', data={'number':100})
     rand_id = random.randint(0, 100)
     ip = webapp.get('/api/ips/%s' % (rand_id))
@@ -68,8 +76,8 @@ def test_holey_ip_allocation(webapp):
 def test_too_large_allocation(webapp):
     # mark 100 addresses in a static range, check that IP allocation comes after this pool
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
-    webapp.post('/api/ranges/', data={'name':'test_range_00','ip_min':'10.100.100.100',
-        'ip_max':'10.100.100.253','subnet':1,'type':'static'})
+    webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+        'max':'10.100.100.253','subnet':1,'type':'static'})
     webapp.put('/api/ranges/1/allocate/', data={'number':100})
     webapp.post('/api/ips/', data={'range':1})
     ip = webapp.get('/api/ips/1')
