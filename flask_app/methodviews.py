@@ -192,7 +192,7 @@ class IPListAPI(MethodView):
                 if not iprange.contains(IPv4Address(request.form.get('address'))):
                     abort(400, "IP address not in provided range")
             else:
-                address = iprange.allocate(1).compressed
+                address = iprange.free_ips(1)[0].compressed
         else:
             ip = IPv4Address(address)
             for iprange in Range.query.all():
@@ -249,15 +249,30 @@ class RangeListAPI(MethodView):
             abort(400, "Range requires a type, min, and max")
         ipmin = IPv4Address(request.form.get('min'))
         ipmax = IPv4Address(request.form.get('max'))
+        rangetype = request.form.get('type')
         for iprange in Range.query.all():
             if iprange.contains(ipmin) or iprange.contains(ipmax):
                 abort(400, "Range overlaps with existing ranges %s" % (iprange.id))
-        ip_range = Range(type=request.form.get('type'),
+        range_ips = []
+        for ip in IP.query.all():
+            if ip.address >= ipmin and ip.address <= ipmax:
+                if rangetype == 'dynamic':
+                    abort(400, "Allocated IP %s within this dynamic range" % (ip.address.compressed))
+                if rangetype == 'static':
+                    if ip.range_id:
+                        abort(400, "Allocated IP %s within this range, but is in range %s" % (
+                            ip.address.compressed, ip.range_id))
+                    range_ips.append(ip)
+        ip_range = Range(type=rangetype,
                 min=request.form.get('min'),
                 max=request.form.get('max'),
                 subnet=_get_or_none(Subnet,request.form.get('subnet')),
                 pool=_get_or_none(Pool,request.form.get('pool')))
         db.session.add(ip_range)
+        db.session.commit()
+        for ip in range_ips:
+            ip.range = ip_range
+            db.session.add(ip)
         db.session.commit()
         ip_range.ldap_add()
         return jsonify(ip_range.config())

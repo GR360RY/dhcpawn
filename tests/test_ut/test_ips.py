@@ -38,6 +38,14 @@ def test_auto_static_ip_ranging(webapp):
     ip = webapp.post('/api/ips/', data={'address':'10.100.100.253'})
     assert ip['range'] == 1
 
+def test_auto_static_range_ip_collection(webapp):
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
+    ip = webapp.post('/api/ips/', data={'address':'10.100.100.253'})
+    iprange = webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
+        'max':'10.100.100.253','subnet':1,'type':'static'})
+    ip = webapp.get('/api/ips/1')
+    assert ip['range'] == 1
+
 def test_ip_range_allocation(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
     webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
@@ -51,7 +59,7 @@ def test_mass_ip_allocation(webapp):
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
     webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
         'max':'10.100.100.253','subnet':1,'type':'static'})
-    webapp.put('/api/ranges/1/allocate/', data={'number':100})
+    iprange = webapp.put('/api/ranges/1/allocate/', data={'number':100})
     ips = webapp.get('/api/ips/')
     assert len(ips['items']) == 100
     assert ips['items'][0]['range'] == 1
@@ -59,26 +67,32 @@ def test_mass_ip_allocation(webapp):
     ip = webapp.get('/api/ips/2')
     assert ip['address'] == '10.100.100.252'
     ip = webapp.post('/api/ips/', data={'range':1})
-    assert ip['address'] == '10.100.100.152'
+    assert ip['address'] == '10.100.100.153'
 
 def test_holey_ip_allocation(webapp):
     # make a random gap in a range, make sure allocation fills it
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
     webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
         'max':'10.100.100.253','subnet':1,'type':'static'})
-    webapp.put('/api/ranges/1/allocate/', data={'number':100})
-    rand_id = random.randint(0, 100)
-    ip = webapp.get('/api/ips/%s' % (rand_id))
-    webapp.delete('/api/ips/%s' % (rand_id))
-    new_ip = webapp.post('/api/ips/', data={'range':1})
-    assert new_ip['address'] == ip['address']
+    iprange = webapp.put('/api/ranges/1/allocate/', data={'number':100})
+    addresses = []
+    for rand_id in random.sample(xrange(99),10):
+        rand_id += 1
+        ip = webapp.get('/api/ips/%s' % (rand_id))
+        addresses.append(IPv4Address(ip['address']))
+        webapp.delete('/api/ips/%s' % (rand_id))
+    new_addresses = []
+    new_ip = IPv4Address(webapp.post('/api/ips/', data={'range':1})['address'])
+    assert new_ip == max(addresses)
+    new_addresses.append(new_ip)
+    for i in xrange(9):
+        new_ip = webapp.post('/api/ips/', data={'range':1})
+        new_addresses.append(IPv4Address(new_ip['address']))
+    assert set(new_addresses) == set(addresses)
 
 def test_too_large_allocation(webapp):
-    # mark 100 addresses in a static range, check that IP allocation comes after this pool
     webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22})
     webapp.post('/api/ranges/', data={'name':'test_range_00','min':'10.100.100.100',
-        'max':'10.100.100.253','subnet':1,'type':'static'})
-    webapp.put('/api/ranges/1/allocate/', data={'number':100})
-    webapp.post('/api/ips/', data={'range':1})
-    ip = webapp.get('/api/ips/1')
-    assert ip['address'] == '10.100.100.149'
+        'max':'10.100.100.150','subnet':1,'type':'static'})
+    with pytest.raises(requests.HTTPError):
+        iprange = webapp.put('/api/ranges/1/allocate/', data={'number':100})

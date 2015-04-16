@@ -170,9 +170,28 @@ class Range(db.Model):
             db.session.commit()
             subnet.ldap_modify()
 
-    def allocate(self):
+    def free_ips(self, num=1):
         # return the first IP address in the range, from the top, without conflict
-        return 0
+        top = self.max+1
+        addresses = []
+        ips = [ip.address for ip in self.ips]
+        ips.sort(reverse=True)
+        ips = [self.max+1] + ips + [self.min-1]
+        i = 0
+        j = 0
+        for ip in ips:
+            while i < num:
+                ip_j = top-j
+                j+=1
+                if ip_j < self.min:
+                    return []
+                if ip >= ip_j:
+                    break
+                addresses.append(ip_j)
+                i+=1
+            if i == num:
+                break
+        return addresses
 
     def contains(self, ip):
         return ip >= self.min and ip <= self.max
@@ -182,6 +201,7 @@ class Range(db.Model):
                 type = self.type,
                 min = self.min.compressed,
                 max = self.max.compressed,
+                ips = [ip.id for ip in self.ips],
                 subnet = self.subnet.id if self.subnet else None,
                 pool = self.pool.id if self.pool else None)
 

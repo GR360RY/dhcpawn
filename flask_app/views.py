@@ -3,7 +3,7 @@ from flask.views import MethodView
 import ldap
 
 from .app import app, ldap_obj
-from .models import db, Host, Group, Subnet, IP
+from .models import db, Host, Group, Subnet, IP, Range, Pool
 from . import methodviews as mv
 
 app.add_url_rule('/api/hosts/', view_func=mv.HostListAPI.as_view('host_list_api'),
@@ -47,3 +47,18 @@ app.add_url_rule('/api/pools/<int:pool_id>', view_func=mv.PoolAPI.as_view('pool_
 def index():
     search = str(ldap_obj.search_st('dc=dhcpawn,dc=net', ldap.SCOPE_SUBTREE))
     return render_template("index.html", search=search)
+
+@app.route("/api/ranges/<int:range_id>/allocate/", methods=['PUT'])
+def allocate(range_id):
+    iprange = mv.get_or_404(Range, range_id)
+    if not request.form.get('number'):
+        abort(400, "Allocation requires number of IPs")
+    ips = iprange.free_ips(int(request.form.get('number')))
+    if not ips:
+        abort(400, "Too many addresses requested")
+    for ip in ips:
+        ip_obj = IP(address = ip.compressed,
+                range_id = iprange.id)
+        db.session.add(ip_obj)
+    db.session.commit()
+    return jsonify(iprange.config())
