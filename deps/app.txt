@@ -11,3 +11,4 @@ URLObject
 uwsgi
 weber-utils>=1.1.5
 python-ldap
+sphinx
