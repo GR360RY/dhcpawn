@@ -25,8 +25,12 @@ def _id_eval(idstr):
     return None
 
 class HostListAPI(MethodView):
+    """GET and POST methods for /api/hosts
+    """
 
     def get(self):
+        """GET method docstring
+        """
         hosts = Host.query.all()
         return jsonify(dict(items=[host.config() for host in hosts]))
 

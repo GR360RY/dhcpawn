@@ -8,7 +8,7 @@ import subprocess
 
 
 from _lib.bootstrapping import bootstrap_env, from_project_root, requires_env, from_env_bin
-from _lib.ansible import ensure_ansible
+from _lib.ansible import ensure_ansible, _ENV_DIR, _PROJECT_ROOT
 bootstrap_env(["base"])
 
 
@@ -69,6 +69,18 @@ def testserver():
         from_project_root("flask_app", "app.yml")
     ])
 
+@cli.command()
+@click.argument('make_args', nargs=-1)
+@requires_env("app", "develop")
+def make_docs(make_args=()):
+    command = ["make"]
+    if make_args:
+        command += list(make_args)
+    else:
+        command += ["html"]
+    environ = os.environ.copy()
+    environ["PATH"] = "{}:{}".format(os.path.join(_ENV_DIR,'bin'), environ["PATH"])
+    subprocess.check_call(' '.join(command), shell=True, env=environ, cwd=os.path.join(_PROJECT_ROOT, 'docs'))
 
 @cli.command()
 @click.option("--dest", type=click.Choice(["production", "staging", "localhost", "vagrant"]), help="Deployment target", required=True)

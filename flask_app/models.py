@@ -41,6 +41,8 @@ class LDAPModel(db.Model):
         ldap_obj.delete_s(self.dn())
 
 class Host(LDAPModel):
+    """ class Host docstring
+    """
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     mac = db.Column(db.String(100), unique=True)
