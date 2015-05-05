@@ -229,7 +229,7 @@ def test_deploy_pool_to_ldap(webapp):
     webapp.put('/api/subnets/1', data={'deployed':True})
     ldap_obj = _ldap_init(webapp)
     with pytest.raises(ldap.NO_SUCH_OBJECT):
-        ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' % 
+        ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
                 (_server_dn(webapp)), ldap.SCOPE_BASE)
     webapp.put('/api/pools/1', data={'deployed':True})
     ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
