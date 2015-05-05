@@ -141,3 +141,86 @@ def test_move_dynamic_pool(webapp):
     with pytest.raises(ldap.NO_SUCH_OBJECT):
         ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
             (_server_dn(webapp)), ldap.SCOPE_BASE)
+
+def test_deploy_host_to_ldap(webapp):
+    webapp.post('/api/hosts/', data={'name':'test_host_00','mac':'08:00:27:26:7a:e7','deployed':False})
+    ldap_obj = _ldap_init(webapp)
+    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_hosts) == 0
+    webapp.put('/api/hosts/1', data={'deployed':True})
+    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_hosts) == 1
+    assert ldap_hosts[0][1]['dhcpHWAddress'] == ['ethernet 08:00:27:26:7a:e7']
+
+def test_deploy_group_to_ldap(webapp):
+    webapp.post('/api/groups/', data={'name':'test_group_00','deployed':False})
+    ldap_obj = _ldap_init(webapp)
+    ldap_groups = ldap_obj.search_s('cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_groups) == 0
+    webapp.put('/api/groups/1', data={'deployed':True})
+    ldap_groups = ldap_obj.search_s('cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_groups) == 1
+    assert ldap_groups[0][1]['cn'] == ['test_group_00']
+
+def test_deploy_subnet_to_ldap(webapp):
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22,'deployed':False})
+    ldap_obj = _ldap_init(webapp)
+    ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_subnets) == 0
+    webapp.put('/api/subnets/1', data={'deployed':True})
+    ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_subnets) == 1
+    assert ldap_subnets[0][1]['cn'] == ['10.100.100.0']
+
+def test_deploy_ip_to_ldap(webapp):
+    webapp.post('/api/hosts/', data={'name':'test_host_00','mac':'08:00:27:26:7a:e7','deployed':False})
+    webapp.post('/api/ips/', data={'address':'10.0.0.10','host':1,'deployed':False})
+    with pytest.raises(requests.HTTPError):
+        webapp.put('/api/ips/1', data={'deployed':True})
+    webapp.put('/api/hosts/1', data={'deployed':True})
+    ldap_obj = _ldap_init(webapp)
+    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert ldap_hosts[0][1]['dhcpHWAddress'] == ['ethernet 08:00:27:26:7a:e7']
+    assert 'dhcpStatements' not in ldap_hosts[0][1]
+    assert 'fixed-address 10.0.0.10' not in ldap_hosts[0][1].values()
+    webapp.put('/api/ips/1', data={'deployed':True})
+    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert 'fixed-address 10.0.0.10' in ldap_hosts[0][1]['dhcpStatements']
+
+def test_deploy_range_to_ldap(webapp):
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22,'deployed':False})
+    webapp.post('/api/ranges/', data={'min':'10.100.100.100','max':'10.100.100.253',
+        'subnet':1,'type':'dynamic','deployed':False})
+    with pytest.raises(requests.HTTPError):
+        webapp.put('/api/ranges/1', data={'deployed':True})
+    webapp.put('/api/subnets/1', data={'deployed':True})
+    subnet = webapp.get('/api/subnets/1')
+    ldap_obj = _ldap_init(webapp)
+    ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert 'dhcpRange' not in ldap_subnets[0][1]
+    assert 'range 10.100.100.100 10.100.100.253' not in ldap_subnets[0][1].values()
+    webapp.put('/api/ranges/1', data={'deployed':True})
+    ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert 'range 10.100.100.100 10.100.100.253' not in ldap_subnets[0][1]['dhcpRange']
+
+def test_deploy_pool_to_ldap(webapp):
+    webapp.post('/api/subnets/', data={'name':'10.100.100.0','netmask':22,'deployed':False})
+    webapp.post('/api/ranges/', data={'type':'dynamic','min':'10.100.100.200','max':'10.100.100.253',
+        'deployed':False})
+    webapp.post('/api/pools/', data={'name':'test_pool_00','range':1,'subnet':1,'deployed':False})
+    with pytest.raises(requests.HTTPError):
+        webapp.put('/api/pools/1', data={'deployed':True})
+    webapp.put('/api/subnets/1', data={'deployed':True})
+    ldap_obj = _ldap_init(webapp)
+    ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
+        (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_pools) == 0
+    with pytest.raises(requests.HTTPError):
+        webapp.put('/api/pools/1', data={'deployed':True})
+    webapp.put('/api/ranges/1', data={'deployed':True})
+    webapp.put('/api/pools/1', data={'deployed':True})
+    ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
+        (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert len(ldap_pools) == 1
+    assert ldap_pools[0][1]['cn'] == ['test_pool_00']
+    assert ldap_pools[0][1]['dhcpRange'] == ['range 10.100.100.200 10.100.100.253']
