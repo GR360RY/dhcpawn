@@ -27,18 +27,21 @@ class LDAPModel(db.Model):
         return dict()
 
     def ldap_add(self):
-        ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
+        if self.deployed:
+            ldap_obj.add_s(self.dn(), ldap.modlist.addModlist(self.modlist()))
 
     def ldap_modify(self):
-        try:
-            objs = ldap_obj.search_s(self.dn(), ldap.SCOPE_BASE)
-            if objs[0][1] != dict(self.modlist()):
-                ldap_obj.modify_s(self.dn(), ldap.modlist.modifyModlist(objs[0][1], dict(self.modlist())))
-        except ldap.NO_SUCH_OBJECT:
-            self.ldap_add()
+        if self.deployed:
+            try:
+                objs = ldap_obj.search_s(self.dn(), ldap.SCOPE_BASE)
+                if objs[0][1] != dict(self.modlist()):
+                    ldap_obj.modify_s(self.dn(), ldap.modlist.modifyModlist(objs[0][1], dict(self.modlist())))
+            except ldap.NO_SUCH_OBJECT:
+                self.ldap_add()
 
     def ldap_delete(self):
-        ldap_obj.delete_s(self.dn())
+        if self.deployed:
+            ldap_obj.delete_s(self.dn())
 
 class Host(LDAPModel):
     id = db.Column(db.Integer, primary_key=True)
@@ -47,6 +50,7 @@ class Host(LDAPModel):
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     ip = db.relationship('IP', backref='host', uselist=False)
     options = db.Column(db.Text)
+    deployed = db.Column(db.Boolean, default=True)
 
     def dn(self):
         if self.group_id:
@@ -55,7 +59,7 @@ class Host(LDAPModel):
 
     def modlist(self):
         options = self.options
-        if self.ip:
+        if self.ip and self.ip.deployed:
             options = json.loads(self.options) if self.options else {}
             if not options.get('dhcpStatements'):
                 options['dhcpStatements'] = []
@@ -71,13 +75,15 @@ class Host(LDAPModel):
                 name = self.name,
                 mac = self.mac,
                 group = self.group_id,
-                options = json.loads(self.options) if self.options else None)
+                options = json.loads(self.options) if self.options else None,
+                deployed = self.deployed)
 
 class Group(LDAPModel):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     hosts = db.relationship('Host', backref='group', lazy='dynamic')
     options = db.Column(db.Text)
+    deployed = db.Column(db.Boolean, default=True)
 
     def dn(self):
         return 'cn=%s,ou=Groups,%s' % (self.name, server_dn())
@@ -91,7 +97,8 @@ class Group(LDAPModel):
                 dn = self.dn(),
                 name = self.name,
                 hosts = [host.id for host in self.hosts.all()],
-                options = json.loads(self.options) if self.options else None)
+                options = json.loads(self.options) if self.options else None,
+                deployed = self.deployed)
 
 class Subnet(LDAPModel):
     id = db.Column(db.Integer, primary_key=True)
@@ -101,6 +108,7 @@ class Subnet(LDAPModel):
     ips = db.relationship('IP', backref='subnet', lazy='dynamic')
     range_id = db.Column(db.Integer, db.ForeignKey('range.id'))
     pools = db.relationship('Pool', backref='subnet', lazy='dynamic')
+    deployed = db.Column(db.Boolean, default=True)
 
     def dn(self):
         return 'cn=%s,ou=Subnets,%s' % (self.name, server_dn())
@@ -109,7 +117,7 @@ class Subnet(LDAPModel):
         mod_dict = dict(objectClass=['dhcpSubnet', 'top'],
                 cn=str(self.name),
                 dhcpNetMask=str(self.netmask))
-        if self.range:
+        if self.range and self.range.deployed:
             mod_dict.update(dict(dhcpRange=[str('range %s %s' % (self.range.min, self.range.max))]))
         return gen_modlist(mod_dict, self.options)
 
@@ -121,7 +129,8 @@ class Subnet(LDAPModel):
                 options = json.loads(self.options) if self.options else None,
                 range = self.range_id,
                 ips = [ip.id for ip in self.ips.all()],
-                pools = [pool.id for pool in self.pools.all()])
+                pools = [pool.id for pool in self.pools.all()],
+                deployed = self.deployed)
 
 class IP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -129,13 +138,14 @@ class IP(db.Model):
     subnet_id = db.Column(db.Integer, db.ForeignKey('subnet.id'))
     range_id = db.Column(db.Integer, db.ForeignKey('range.id'))
     host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
+    deployed = db.Column(db.Boolean, default=True)
 
     def ldap_add(self):
-        if self.host:
+        if self.host and self.deployed:
             self.host.ldap_modify()
 
     def ldap_delete(self):
-        if self.host:
+        if self.host and self.deployed:
             host = self.host
             host.ip = None
             db.session.add(host)
@@ -157,13 +167,14 @@ class Range(db.Model):
     subnet = db.relationship('Subnet', backref='range', uselist=False)
     pool = db.relationship('Pool', backref='range', uselist=False)
     ips = db.relationship('IP', backref='range')
+    deployed = db.Column(db.Boolean, default=True)
 
     def ldap_add(self):
-        if self.type == 'dynamic' and self.subnet:
+        if self.type == 'dynamic' and self.subnet and self.deployed:
             self.subnet.ldap_modify()
 
     def ldap_delete(self):
-        if self.type == 'dynamic' and self.subnet:
+        if self.type == 'dynamic' and self.subnet and self.deployed:
             subnet = self.subnet
             subnet.ip = None
             db.session.add(subnet)
@@ -203,7 +214,8 @@ class Range(db.Model):
                 max = self.max.compressed,
                 ips = [ip.id for ip in self.ips],
                 subnet = self.subnet.id if self.subnet else None,
-                pool = self.pool.id if self.pool else None)
+                pool = self.pool.id if self.pool else None,
+                deployed = self.deployed)
 
 class Pool(LDAPModel):
     id = db.Column(db.Integer, primary_key=True)
@@ -211,6 +223,7 @@ class Pool(LDAPModel):
     subnet_id = db.Column(db.Integer, db.ForeignKey('subnet.id'))
     range_id = db.Column(db.Integer, db.ForeignKey('range.id'))
     options = db.Column(db.Text)
+    deployed = db.Column(db.Boolean, default=True)
 
     def dn(self):
         return 'cn=%s,%s' % (self.name, self.subnet.dn())
@@ -227,6 +240,5 @@ class Pool(LDAPModel):
                 name = self.name,
                 subnet = self.subnet.id,
                 range = self.range.id,
-                options = self.options)
-
-
+                options = self.options,
+                deployed = self.deployed)

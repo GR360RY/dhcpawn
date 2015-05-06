@@ -48,9 +48,9 @@ def test_create_subnet(webapp):
 
 def test_update_subnet(webapp):
     webapp.post('/api/subnets/', data={'name':'test_subnet_00','netmask':22})
-    webapp.put('/api/subnets/1', data={'name':'test_subnet_01','netmask':21})
+    webapp.put('/api/subnets/1', data={'netmask':21})
     subnet = webapp.get('/api/subnets/1')
-    assert subnet['name'] == 'test_subnet_01'
+    assert subnet['name'] == 'test_subnet_00'
     assert subnet['netmask'] == 21
 
 def test_delete_subnet(webapp):
