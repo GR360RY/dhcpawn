@@ -6,12 +6,25 @@
 - include: redis.yml
 - include: nginx.yml
 - include: configuration.yml
+- name: check if vagrant
+  stat: path=/vagrant
+  register: vagrant
+- name: copy source from vagrant
+  shell: cd /vagrant && git ls-files -z | rsync --files-from - --copy-links -a0 . {{deploy_root}}
+  when: vagrant.stat.exists
 - name: copy source
   copy: src=../src_pkg.tar dest={{webapp_archive_location}}
   register: sources
   notify: reload nginx config
+  when: not vagrant.stat.exists
+- name: temporarily move source tar
+  shell: cp -f {{webapp_archive_location}} {{webapp_archive_location}}.untarred
+  when: (not vagrant.stat.exists) and (sources.changed or configuration.changed)
+- name: untar sources
+  shell: cd {{deploy_root}} && rm -rf flask_app src && tar xf {{webapp_archive_location}}.untarred 2>&1 > /tmp/untar.log
+  when: (not vagrant.stat.exists) and (sources.changed or configuration.changed)
 - include: install_sources.yml
-  when: sources.changed or configuration.changed
+  when: vagrant.stat.exists or (sources.changed or configuration.changed)
 - name: configure supervisor
   action: template src=../templates/supervisor.j2 dest=/etc/supervisor/conf.d/{{app_name}}-wsgi.conf
   register: supervisor_conf
