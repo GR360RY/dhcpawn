@@ -1,0 +1,15 @@
+{
+    "servers": [
+        {
+            "port": 8090,
+            "proxy": {
+                "target": {
+                    "host": "127.1",
+                    "port": 10080
+                },
+                "pathPatterns": ["^/api/"]
+            },
+            "srcDir": "app"
+        }
+    ]
+}
