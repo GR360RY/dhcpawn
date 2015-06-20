@@ -7,14 +7,15 @@ We'll assume that:
 
 **Prerequisites:**
 
-    npm i -g bower swb-patches
+    npm i -g bower grunt-cli
 
 **Install local dependencies:**
 
     bower install
+    npm install
 
 **Start the development server:**
 
-    swb
+    grunt runserver
 
 Visit http://127.0.0.1:8090/ to see whether the above steps worked.
