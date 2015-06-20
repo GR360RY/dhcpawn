@@ -7,6 +7,7 @@ Flask-SQLAlchemy
 sqlalchemy_utils
 ipaddr
 PyYAML
+sphinx_rtd_theme
 URLObject
 uwsgi
 weber-utils>=1.1.5

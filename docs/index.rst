@@ -3,14 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-dhcpawn
-===================================
+DHCPawn Documentation
+=====================
+
+About DHCPawn
+-------------
+
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
+   readme.rst
    api.rst
 
 Indices and tables
