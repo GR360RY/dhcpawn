@@ -29,6 +29,9 @@ def generate_nginx_config(path):
         os.makedirs(os.path.dirname(path))
     with open(path, "w") as f:
         f.write("""server {{
+    location /client {{
+       alias {client_root};
+    }}
     location /static {{
        alias {static_root};
     }}
@@ -36,4 +39,6 @@ def generate_nginx_config(path):
        	 include uwsgi_params;
          uwsgi_pass unix:{sock_name};
     }}
-}}""".format(static_root=from_project_root("static"), sock_name=_UNIX_SOCKET_NAME))
+}}""".format(static_root=from_project_root('static'),
+             client_root=from_project_root('client', 'app'),
+             sock_name=_UNIX_SOCKET_NAME))
