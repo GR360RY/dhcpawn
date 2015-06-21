@@ -9,13 +9,16 @@ DHCPawn Documentation
 About DHCPawn
 -------------
 
+Welcome to DHCPawn Documentation! 
+
+DHCPawn is a ISC DHCP Server as a Service with RESTfull API and LDAP Backend.
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   readme.rst
+   intro.rst
    api.rst
 
 Indices and tables
