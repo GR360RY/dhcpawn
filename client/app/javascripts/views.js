@@ -1,13 +1,19 @@
 define([
     'lodash',
-    'views/index'
-], function (_, IndexView) {
+    'views/index',
+    'views/groups'
+], function (_, IndexView, GroupsView) {
     var exports = {}
 
-    exports.index = function () {
-        var view = new IndexView({el: '#view-container'})
-        view.render()
+    function renderView(View) {
+        return function () {
+            var view = new View({el: '#view-container'})
+            view.render()
+        }
     }
+
+    exports.index = renderView(IndexView)
+    exports.groups = renderView(GroupsView)
 
     return exports
 })

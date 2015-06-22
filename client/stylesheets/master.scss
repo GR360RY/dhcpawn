@@ -2,8 +2,12 @@ body {
     text-rendering: optimizelegibility;
 }
 
+#view-container> .container-fluid> h1:first-child {
+    margin-top: 0;
+}
+
 .view-index {
-    &>h1:first-child {
-        margin-top: 0;
-    }
+}
+
+.view-groups {
 }

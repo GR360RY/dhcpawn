@@ -33,6 +33,7 @@ requirejs([
     var Router = Backbone.Router.extend(_.defaults({
         routes: {
             '': 'index',
+            'groups': 'groups',
             '*404': 'notFound'
         },
 
