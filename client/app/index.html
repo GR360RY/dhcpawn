@@ -8,7 +8,24 @@
         <link rel=stylesheet href="./stylesheets/master.css">
     </head>
     <body>
-        <script src="./javascripts/vendor/jquery.min.js"></script>
-        <script src="./javascripts/vendor/bootstrap.min.js"></script>
+        <div class=container>
+            <div class=header>
+                <h3><a href=#>DHCPawn</a></h3>
+            </div>
+            <div class=row>
+                <div class=col-sm-3 id=sidebar>
+                    <div class=list-group>
+                        <a href=#hosts class=list-group-item>Hosts</a>
+                        <a href=#groups class=list-group-item>Groups</a>
+                        <a href=#subnets class=list-group-item>Subnets</a>
+                        <a href=#ips class=list-group-item>IPs</a>
+                        <a href=#ranges class=list-group-item>Ranges</a>
+                        <a href=#pools class=list-group-item>Pools</a>
+                    </div>
+                </div>
+                <div class=col-sm-9 id=view-container></div>
+            </div>
+        </div>
+        <script src="./javascripts/vendor/require.min.js" data-main="./javascripts/app.js"></script>
     </body>
 </html>

@@ -1,5 +1,7 @@
 body {
-  background: #fffbeb;
   text-rendering: optimizelegibility; }
+
+.view-index > h1:first-child {
+  margin-top: 0; }
 
 /*# sourceMappingURL=master.css.map */
