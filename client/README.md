@@ -1,6 +1,8 @@
 Running the client locally
 --------------------------
 
+This section describes a setup intended for development.
+
 We'll assume that:
 - you have Node.js installed
 - the DHCPawn API is listening on port 10080

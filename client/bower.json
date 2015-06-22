@@ -1,7 +1,14 @@
 {
   "name": "dhcpawn_client",
-  "version": "0.0.0",
+  "version": "0.0.1-dev",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:GR360RY/dhcpawn.git"
+  },
   "dependencies": {
-    "bootstrap-sans-bullshit": "3.3.5-sans2"
+    "bootstrap-sans-bullshit": "3.3.5-sans2",
+    "requirejs": "~2.1.18",
+    "lodash": "~3.9.3",
+    "backbone": "~1.2.1"
   }
 }
