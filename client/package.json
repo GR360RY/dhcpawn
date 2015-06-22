@@ -1,11 +1,16 @@
 {
   "name": "dhcpawn_client",
-  "version": "0.0.0",
+  "version": "0.0.1-dev",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:GR360RY/dhcpawn.git"
+  },
   "devDependencies": {
     "grunt": "^0.4.5",
     "grunt-connect-proxy": "^0.2.0",
     "grunt-contrib-connect": "^0.10.1",
     "grunt-contrib-watch": "^0.6.1",
-    "grunt-sass": "^1.0.0"
+    "grunt-sass": "^1.0.0",
+    "uglify-js": "^2.4.23"
   }
 }

@@ -1,18 +1,25 @@
 CSS := bower_components/bootstrap-sans-bullshit/dist/css/bootstrap.min.css
 JS := bower_components/jquery/dist/jquery.min.js \
-    bower_components/bootstrap-sans-bullshit/dist/js/bootstrap.min.js
+    bower_components/bootstrap-sans-bullshit/dist/js/bootstrap.min.js \
+    bower_components/lodash/lodash.min.js \
+    bower_components/backbone/backbone-min.js
 
 _all: bower_components node_modules
 
 bower_components: bower.json
 	bower install
+	touch $@
 
 node_modules: package.json
 	npm install
+	touch $@
 
-_copy: bower_components
+_copy: bower_components node_modules
 	ln -f $(CSS) app/stylesheets/vendor/
 	ln -f $(JS) app/javascripts/vendor/
+	# Produce a minified version of RequireJS
+	./node_modules/.bin/uglifyjs -o app/javascripts/vendor/require.min.js \
+	    --compress -- bower_components/requirejs/require.js
 
 _clean:
 	rm -rf bower_components node_modules
