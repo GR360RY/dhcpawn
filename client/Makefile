@@ -20,6 +20,8 @@ _copy: bower_components node_modules
 	# Produce a minified version of RequireJS
 	./node_modules/.bin/uglifyjs -o app/javascripts/vendor/require.min.js \
 	    --compress -- bower_components/requirejs/require.js
+	./node_modules/.bin/uglifyjs -o app/javascripts/vendor/requirejs-text.min.js \
+	    --compress -- bower_components/requirejs-text/text.js
 
 _clean:
 	rm -rf bower_components node_modules

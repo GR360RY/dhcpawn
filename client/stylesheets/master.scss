@@ -1,6 +1,9 @@
-$background-color: #fffbeb;
-
 body {
-    background: $background-color;
     text-rendering: optimizelegibility;
+}
+
+.view-index {
+    &>h1:first-child {
+        margin-top: 0;
+    }
 }
