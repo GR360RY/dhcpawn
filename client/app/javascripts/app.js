@@ -4,6 +4,7 @@ requirejs.config({
         bootstrap: 'vendor/bootstrap.min',
         underscore: 'vendor/lodash.min',
         backbone: 'vendor/backbone-min',
+        backgrid: 'vendor/backgrid.min',
         text: 'vendor/requirejs-text.min',
         templates: '../templates'
     },
@@ -15,6 +16,10 @@ requirejs.config({
     shim: {
         bootstrap: {
             deps: ['jquery']
+        },
+        backgrid: {
+            deps: ['jquery', 'lodash', 'backbone'],
+            exports: 'Backgrid'
         }
     }
 })

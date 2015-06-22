@@ -10,6 +10,13 @@
     "requirejs": "~2.1.18",
     "lodash": "~3.9.3",
     "backbone": "~1.2.1",
-    "requirejs-text": "~2.0.14"
+    "requirejs-text": "~2.0.14",
+    "backgrid": "~0.3.5",
+    "jquery": "~2.1.4"
+  },
+  "resolutions": {
+    "backbone": "~1.2.1",
+    "underscore": ">=1.7.0",
+    "jquery": "~2.1.4"
   }
 }

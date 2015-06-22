@@ -2,10 +2,12 @@ define([
     'lodash',
     'views/index'
 ], function (_, IndexView) {
-    function index() {
+    var exports = {}
+
+    exports.index = function () {
         var view = new IndexView({el: '#view-container'})
         view.render()
     }
 
-    return {index: index}
+    return exports
 })

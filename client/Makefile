@@ -2,7 +2,8 @@ CSS := bower_components/bootstrap-sans-bullshit/dist/css/bootstrap.min.css
 JS := bower_components/jquery/dist/jquery.min.js \
     bower_components/bootstrap-sans-bullshit/dist/js/bootstrap.min.js \
     bower_components/lodash/lodash.min.js \
-    bower_components/backbone/backbone-min.js
+    bower_components/backbone/backbone-min.js \
+    bower_components/backgrid/lib/backgrid.min.js
 
 _all: bower_components node_modules
 
