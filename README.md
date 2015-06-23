@@ -73,9 +73,8 @@ This starts a local Flask process on port 8000. Note that this, and the deployme
 
 DHCPawn uses a REST API. More complete documentation will be added soon, but the following is an example of adding cl01 to a test group:
 
-    curl http://localhost:10080/api/servers/ -d "hostname=dhcpawn.net" -X POST
-    curl http://localhost:10080/api/groups/ -d "name=testgroup" -d "server_id=1" -X POST
-    curl http://localhost:10080/api/hosts/ -d "name=cl01" -d "mac=08:00:27:26:7a:e7" -d "group_id=1" -X POST
+    curl http://localhost:10080/api/groups/ -d "name=testgroup" -X POST
+    curl http://localhost:10080/api/hosts/ -d "name=cl01" -d "mac=08:00:27:26:7a:e7" -d "group=1" -X POST
 
 ### Connecting to Backend Ldap
 
