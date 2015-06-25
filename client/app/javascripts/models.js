@@ -5,5 +5,9 @@ define(['backbone'], function (Backbone) {
         urlRoot: '/api/groups/'
     })
 
+    exports.RangeModel = Backbone.Model.extend({
+        urlRoot: '/api/ranges/'
+    })
+
     return exports
 })

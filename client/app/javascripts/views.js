@@ -1,8 +1,9 @@
 define([
     'lodash',
     'views/index',
-    'views/groups'
-], function (_, IndexView, GroupsView) {
+    'views/groups',
+    'views/ranges'
+], function (_, IndexView, GroupsView, RangesView) {
     var exports = {}
 
     function renderView(View) {
@@ -14,6 +15,7 @@ define([
 
     exports.index = renderView(IndexView)
     exports.groups = renderView(GroupsView)
+    exports.ranges = renderView(RangesView)
 
     return exports
 })

@@ -5,6 +5,9 @@ JS := bower_components/jquery/dist/jquery.min.js \
     bower_components/backbone/backbone-min.js \
     bower_components/backgrid/lib/backgrid.min.js
 
+_runserver: _all
+	grunt runserver
+
 _all: bower_components node_modules
 
 bower_components: bower.json
@@ -27,4 +30,4 @@ _copy: bower_components node_modules
 _clean:
 	rm -rf bower_components node_modules
 
-.PHONY: _all _copy _clean
+.PHONY: _all _copy _clean _runserver
