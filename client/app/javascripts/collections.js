@@ -15,5 +15,10 @@ define([
         url: '/api/groups/'
     })
 
+    exports.RangeCollection = Collection.extend({
+        model: models.RangeModel,
+        url: '/api/ranges/'
+    })
+
     return exports
 })

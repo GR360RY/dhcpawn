@@ -2,7 +2,7 @@ define([
     'backbone',
     'backgrid',
     'collections',
-    'text!templates/_groups.html'
+    'text!templates/_ranges.html'
 ], function (Backbone, Backgrid, collections, template) {
     var columns = [
         {
@@ -11,12 +11,17 @@ define([
             editable: false
         },
         {
-            name: 'name',
+            name: 'type',
             cell: 'string',
             editable: false
         },
         {
-            name: 'dn',
+            name: 'min',
+            cell: 'string',
+            editable: false
+        },
+        {
+            name: 'max',
             cell: 'string',
             editable: false
         }
@@ -24,7 +29,7 @@ define([
 
     return Backbone.View.extend({
         initialize: function () {
-            this.collection = new collections.GroupCollection
+            this.collection = new collections.RangeCollection
 
             this.grid = new Backgrid.Grid({
                 columns: columns,

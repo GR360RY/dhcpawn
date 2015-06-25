@@ -34,6 +34,7 @@ requirejs([
         routes: {
             '': 'index',
             'groups': 'groups',
+            'ranges': 'ranges',
             '*404': 'notFound'
         },
 
