@@ -4,6 +4,7 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-connect-proxy')
     grunt.loadNpmTasks('grunt-contrib-watch')
     grunt.loadNpmTasks('grunt-sass')
+    grunt.loadNpmTasks('grunt-contrib-jshint')
 
     var proxyRequest = require('grunt-connect-proxy/lib/utils').proxyRequest
 
@@ -47,6 +48,17 @@ module.exports = function (grunt) {
                     spawn: false
                 }
             }
+        },
+
+        jshint: {
+            options: {
+                jshintrc: true
+            },
+            all: [
+                'Gruntfile.js',
+                'app/javascripts/*.js',
+                'app/javascripts/views/*.js'
+            ]
         }
     })
 
