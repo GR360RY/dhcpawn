@@ -6,6 +6,7 @@ JS := bower_components/jquery/dist/jquery.min.js \
     bower_components/backgrid/lib/backgrid.min.js
 
 _runserver: _all
+	- grunt jshint
 	grunt runserver
 
 _all: bower_components node_modules

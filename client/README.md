@@ -21,3 +21,9 @@ We'll assume that:
     grunt runserver
 
 Visit http://127.0.0.1:8090/ to see whether the above steps worked.
+
+### Other useful commands
+
+**Check JavaScript code with JSHint**
+
+    grunt jshint
