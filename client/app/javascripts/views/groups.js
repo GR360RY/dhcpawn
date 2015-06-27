@@ -14,11 +14,6 @@ define([
             name: 'name',
             cell: 'string',
             editable: false
-        },
-        {
-            name: 'dn',
-            cell: 'string',
-            editable: false
         }
     ]
 

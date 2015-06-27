@@ -5,6 +5,7 @@ requirejs.config({
         underscore: 'vendor/lodash.min',
         backbone: 'vendor/backbone-min',
         backgrid: 'vendor/backgrid.min',
+        epoxy: 'vendor/backbone.epoxy.min',
         text: 'vendor/requirejs-text.min',
         templates: '../templates'
     },
@@ -28,7 +29,8 @@ requirejs([
     'lodash',
     'backbone',
     'views',
-    'bootstrap'
+    'bootstrap',
+    'epoxy'
 ], function (_, Backbone, views) {
     var Router = Backbone.Router.extend(_.defaults({
         routes: {
