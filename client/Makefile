@@ -27,6 +27,9 @@ _copy: bower_components node_modules
 	    --compress -- bower_components/requirejs/require.js
 	./node_modules/.bin/uglifyjs -o app/javascripts/vendor/requirejs-text.min.js \
 	    --compress -- bower_components/requirejs-text/text.js
+	# Produce a minified version of Epoxy
+	./node_modules/.bin/uglifyjs -o app/javascripts/vendor/backbone.epoxy.min.js \
+	    --compress -- bower_components/backbone.epoxy/backbone.epoxy.js
 
 _clean:
 	rm -rf bower_components node_modules
