@@ -9,11 +9,10 @@ We'll assume that:
 
 **Prerequisites:**
 
-    npm i -g bower grunt-cli
+    npm i -g grunt-cli
 
 **Install local dependencies:**
 
-    bower install
     npm install
 
 **Start the development server:**
