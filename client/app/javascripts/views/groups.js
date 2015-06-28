@@ -6,11 +6,6 @@ define([
 ], function (Backbone, Backgrid, collections, template) {
     var columns = [
         {
-            name: 'id',
-            cell: 'integer',
-            editable: false
-        },
-        {
             name: 'name',
             cell: 'string',
             editable: false
