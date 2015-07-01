@@ -14,7 +14,7 @@ def _is_any_file_newer(paths, reference_filename):
     return False
 
 def _tar(paths):
-    if 0 != subprocess.call("tar cvf {0} {1}".format(tarfile, " ".join(paths)), shell=True, cwd=from_project_root()):
+    if 0 != subprocess.call("tar cf {0} {1}".format(tarfile, " ".join(paths)), shell=True, cwd=from_project_root()):
         raise Exception("Tar failed")
 
 def _get_paths_to_tar():
