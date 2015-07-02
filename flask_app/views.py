@@ -51,9 +51,10 @@ def index():
 @app.route("/api/ranges/<int:range_id>/allocate/", methods=['PUT'])
 def allocate(range_id):
     iprange = mv.get_or_404(Range, range_id)
-    if not request.form.get('number'):
+    data = request.get_json(force=True)
+    if not data.get('number'):
         abort(400, "Allocation requires number of IPs")
-    ips = iprange.free_ips(int(request.form.get('number')))
+    ips = iprange.free_ips(int(data.get('number')))
     if not ips:
         abort(400, "Too many addresses requested")
     for ip in ips:
