@@ -7,8 +7,8 @@
       dhcpStatements:
         - default-lease-time 120
       dhcpOption:
-        - option routers 10.0.0.254
-        - option broadcast-address 10.100.100.255
+        - routers 10.0.0.254
+        - broadcast-address 10.100.100.255
 
 - url: /api/ranges/
   data:
