@@ -104,3 +104,21 @@ will automatically migrate any database changes already in the migrations/ direc
     python manage.py db revision
 
 Be sure to review the alembic migration file generated in migrations/ before deploying.
+
+## Database population
+
+To populate the database with the example data provided in sample_data.yml, first make sure the database is clean (warning: this will overwrite all existing data, both in Postgres and LDAP):
+
+    python manage.py db drop --ldap
+
+and that the database tables have been set up:
+
+    python manage.py db upgrade
+
+Then the data can be populated using the populate command:
+
+    python manage.py populate
+
+This simply sends POST requests with the data in the provided yaml file, so it could be used to send a large configuration to an existing DHCPawn instance:
+
+    python manage.py populate --host dhcpawnserver --port 80 --filename configuration.yml

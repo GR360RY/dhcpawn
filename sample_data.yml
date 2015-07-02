@@ -1,0 +1,69 @@
+---
+- url: /api/subnets/
+  data:
+    name: 10.100.100.0
+    netmask: 22
+    options: 
+      dhcpStatements:
+        - default-lease-time 120
+      dhcpOption:
+        - option routers 10.0.0.254
+        - option broadcast-address 10.100.100.255
+
+- url: /api/ranges/
+  data:
+    name: test_range_00
+    type: static
+    subnet: 1
+    min: 10.100.100.0
+    max: 10.100.100.199
+
+- url: /api/ranges/
+  data:
+    name: test_range_01
+    type: dynamic
+    min: 10.100.100.200
+    max: 10.100.100.253
+
+- url: /api/pools/
+  data:
+    name: test_pool_00
+    range: 1
+    subnet: 1
+    options:
+      dhcpStatements:
+        - next-server 10.0.0.10
+
+- url: /api/hosts/
+  data:
+    name: test_host_00
+    mac: 08:00:27:26:7a:e7
+
+- url: /api/ips/
+  data:
+    address: 10.0.0.10
+    host: 1
+
+- url: /api/groups/
+  data:
+    name: test_group_00
+    options:
+      dhcpStatements:
+        - filename "pxelinux.0"
+      dhcpOption:
+        - ntp-servers 0.europe.pool.ntp.org
+
+- url: /api/hosts/
+  data:
+    name: test_host_01
+    mac: 08:00:27:19:6c:a4
+    group: 1
+    options:
+      dhcpStatements:
+        - ddns-updates off
+
+- url: /api/hosts/
+  data:
+    name: test_host_02
+    mac: 00:00:00:00:00:00
+    group: 1
