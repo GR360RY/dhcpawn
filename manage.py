@@ -19,6 +19,8 @@ from _lib.docker import build_docker_image, start_docker_container, stop_docker_
 from _lib.db import db
 import click
 import requests
+import yaml
+import json
 
 
 ##### ACTUAL CODE ONLY BENEATH THIS POINT ######
@@ -96,6 +98,17 @@ def _run_deploy(dest):
         cmd.append(from_project_root("ansible", "site.yml"))
         subprocess.check_call(cmd)
 
+@click.option("--host", help="Host running DHCPawn", default="localhost")
+@click.option("--port", help="Port on host running DHCPawn", default=10080)
+@click.option("--filename", help="YAML file containing population calls, like sample_data.yml",
+        default="sample_data.yml")
+@cli.command()
+@requires_env("app")
+def populate(host, port, filename):
+    with open(filename, 'r') as f:
+        data = yaml.load(f)
+    for command in data:
+        requests.post('http://%s:%d%s' % (host, port, command['url']), data=json.dumps(command['data']))
 
 @cli.command()
 def unittest():

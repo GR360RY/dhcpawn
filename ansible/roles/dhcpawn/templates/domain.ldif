@@ -29,14 +29,3 @@ dn: ou=Hosts,cn=DHCP Config,cn={{ansible_hostname}},dc={{ openldap_server_domain
 objectClass: organizationalUnit
 objectClass: top
 ou: Groups
-
-dn: cn=10.100.100.0,ou=Subnets,cn=DHCP Config,cn={{ansible_hostname}},dc={{ openldap_server_domain_name.split('.')[0] }},dc={{ openldap_server_domain_name.split('.')[1] }}
-objectClass: dhcpOptions
-objectClass: dhcpSubnet
-objectClass: top
-cn: 10.100.100.0
-dhcpNetMask: 22
-dhcpComments: Test Subnet
-dhcpOption: broadcast-address 10.100.100.255
-dhcpRange: 10.100.100.1 10.100.100.100
-
