@@ -24,21 +24,22 @@ class HostListAPI(MethodView):
         return jsonify(dict(items=[host.config() for host in hosts]))
 
     def post(self):
-        if any(key not in request.form for key in ['name','mac']):
+        data = request.get_json(force=True)
+        if any(key not in data for key in ['name','mac']):
             abort(400, "Host requires name and mac")
-        if Host.query.filter(Host.mac==request.form.get('mac')).all():
+        if Host.query.filter(Host.mac==data.get('mac')).all():
             abort(400, "A host with this MAC already exists")
-        host = Host(name=request.form.get('name'),
-                mac=request.form.get('mac'),
-                group_id=eval(str(request.form.get('group'))),
-                options=request.form.get('options'))
+        host = Host(name=data.get('name'),
+                mac=data.get('mac'),
+                group_id=data.get('group'),
+                options=json.dumps(data.get('options',{})))
         deployable = True
         if host.group_id:
             group = get_or_404(Group, host.group_id)
             deployable = group.deployed
-        host.deployed = eval(str(request.form.get('deployed',True)))
-        if 'deployed' in request.form:
-            if request.form.get('deployed') and not deployable:
+        host.deployed = data.get('deployed',True)
+        if 'deployed' in data:
+            if data.get('deployed') and not deployable:
                 abort(400, "Cannot deploy host as subobject of non-deployed group")
         else:
             if not deployable:
@@ -56,17 +57,18 @@ class HostAPI(MethodView):
 
     def put(self, host_id):
         host = get_or_404(Host, host_id)
+        data = request.get_json(force=True)
         host.ldap_delete()
-        if 'name' in request.form:
-            host.name = request.form.get('name')
-        if 'mac' in request.form:
-            host.mac = request.form.get('mac')
-        if 'group' in request.form:
-            host.group_id = eval(str(request.form.get('group')))
-        if 'options' in request.form:
-            host.options = request.form.get('options')
-        if 'deployed' in request.form:
-            host.deployed = eval(str(request.form.get('deployed',True)))
+        if 'name' in data:
+            host.name = data.get('name')
+        if 'mac' in data:
+            host.mac = data.get('mac')
+        if 'group' in data:
+            host.group_id = data.get('group')
+        if 'options' in data:
+            host.options = json.dumps(data.get('options'))
+        if 'deployed' in data:
+            host.deployed = data.get('deployed',True)
             if host.deployed and host.group_id:
                 group = get_or_404(Group, host.group_id)
                 if not group.deployed:
@@ -90,11 +92,12 @@ class GroupListAPI(MethodView):
         return jsonify(dict(items=[group.config() for group in groups]))
 
     def post(self):
-        if any(key not in request.form for key in ['name']):
+        data = request.get_json(force=True)
+        if any(key not in data for key in ['name']):
             abort(400, "Group requires name")
-        group = Group(name=request.form.get('name'),
-                options=request.form.get('options'),
-                deployed=request.form.get('deployed'))
+        group = Group(name=data.get('name'),
+                options=json.dumps(data.get('options',{})),
+                deployed=data.get('deployed'))
         db.session.add(group)
         db.session.commit()
         group.ldap_add()
@@ -108,15 +111,16 @@ class GroupAPI(MethodView):
 
     def put(self, group_id):
         group = get_or_404(Group, group_id)
+        data = request.get_json(force=True)
         for host in group.hosts.all():
             host.ldap_delete()
         group.ldap_delete()
-        if 'name' in request.form:
-            group.name = request.form.get('name')
-        if 'options' in request.form:
-            group.options = request.form.get('options')
-        if 'deployed' in request.form:
-            group.deployed = request.form.get('deployed')
+        if 'name' in data:
+            group.name = data.get('name')
+        if 'options' in data:
+            group.options = json.dumps(data.get('options'))
+        if 'deployed' in data:
+            group.deployed = data.get('deployed')
         db.session.add(group)
         db.session.commit()
         group.ldap_add()
@@ -145,12 +149,13 @@ class SubnetListAPI(MethodView):
         return jsonify(dict(items=[subnet.config() for subnet in subnets]))
 
     def post(self):
-        if any(key not in request.form for key in ['name','netmask']):
+        data = request.get_json(force=True)
+        if any(key not in data for key in ['name','netmask']):
             abort(400, "Subnet requires name and netmask")
-        subnet = Subnet(name=request.form.get('name'),
-                netmask=request.form.get('netmask'),
-                options=request.form.get('options'),
-                deployed=request.form.get('deployed'))
+        subnet = Subnet(name=data.get('name'),
+                netmask=data.get('netmask'),
+                options=json.dumps(data.get('options',{})),
+                deployed=data.get('deployed'))
         db.session.add(subnet)
         db.session.commit()
         subnet.ldap_add()
@@ -164,12 +169,13 @@ class SubnetAPI(MethodView):
 
     def put(self, subnet_id):
         subnet = get_or_404(Subnet, subnet_id)
-        if 'netmask' in request.form:
-            subnet.netmask = request.form.get('netmask')
-        if 'options' in request.form:
-            subnet.options = request.form.get('options')
-        if 'deployed' in request.form:
-            subnet.deployed = request.form.get('deployed')
+        data = request.get_json(force=True)
+        if 'netmask' in data:
+            subnet.netmask = data.get('netmask')
+        if 'options' in data:
+            subnet.options = json.dumps(data.get('options'))
+        if 'deployed' in data:
+            subnet.deployed = data.get('deployed')
         db.session.add(subnet)
         db.session.commit()
         subnet.ldap_modify()
@@ -192,19 +198,20 @@ class IPListAPI(MethodView):
         return jsonify(dict(items=[ip.config() for ip in ips]))
 
     def post(self):
-        if all(key not in request.form for key in ['address','range']):
+        data = request.get_json(force=True)
+        if all(key not in data for key in ['address','range']):
             abort(400, "IP requires address or range")
-        address = request.form.get('address')
+        address = data.get('address')
         existing_ips = IP.query.filter(IP.address==address).all()
         if existing_ips:
             abort(400, "This IP address is already allocated")
-        range_id = request.form.get('range')
+        range_id = data.get('range')
         if range_id:
             iprange = get_or_404(Range, range_id)
             if iprange.type == 'dynamic':
                 abort(400, "Provided dynamic range, and IPs cannot be allocated in a dynamic range")
             if address:
-                if not iprange.contains(IPv4Address(request.form.get('address'))):
+                if not iprange.contains(IPv4Address(data.get('address'))):
                     abort(400, "IP address not in provided range")
             else:
                 address = iprange.free_ips(1)[0].compressed
@@ -219,9 +226,9 @@ class IPListAPI(MethodView):
                             abort(400, "Both ranges %s and %s contain IP" % (range_id, iprange.id))
                         range_id = iprange.id
         ip = IP(address=address,
-                subnet_id=request.form.get('subnet'),
+                subnet_id=data.get('subnet'),
                 range_id=range_id,
-                host_id=request.form.get('host'))
+                host_id=data.get('host'))
         deployable = True
         if ip.subnet_id:
             subnet = get_or_404(Subnet, ip.subnet_id)
@@ -235,8 +242,8 @@ class IPListAPI(MethodView):
             host = get_or_404(Host, ip.host_id)
             if not host.deployed:
                 deployable = False
-        ip.deployed = eval(str(request.form.get('deployed', True)))
-        if 'deployed' in request.form:
+        ip.deployed = data.get('deployed', True)
+        if 'deployed' in data:
             if ip.deployed and not deployable:
                 abort(400, "Cannot deploy IP in non-deployed host, subnet, or range")
         else:
@@ -255,15 +262,16 @@ class IPAPI(MethodView):
 
     def put(self, ip_id):
         ip = get_or_404(IP, ip_id)
-        if request.form.get('address') or request.form.get('range'):
+        data = request.get_json(force=True)
+        if data.get('address') or data.get('range'):
             abort(400, "IP POST requests only accept host and subnet IDs")
         ip.ldap_delete()
-        if 'host' in request.form:
-            ip.host_id = request.form.get('host')
-        if 'subnet' in request.form:
-            ip.subnet_id = request.form.get('subnet')
-        if 'deployed' in request.form:
-            ip.deployed = request.form.get('deployed')
+        if 'host' in data:
+            ip.host_id = data.get('host')
+        if 'subnet' in data:
+            ip.subnet_id = data.get('subnet')
+        if 'deployed' in data:
+            ip.deployed = data.get('deployed')
             if ip.deployed:
                 if ip.host_id:
                     host = get_or_404(Host, ip.host_id)
@@ -295,11 +303,12 @@ class RangeListAPI(MethodView):
         return jsonify(dict(items=[range.config() for range in ranges]))
 
     def post(self):
-        if any(key not in request.form for key in ['type','min','max']):
+        data = request.get_json(force=True)
+        if any(key not in data for key in ['type','min','max']):
             abort(400, "Range requires a type, min, and max")
-        ipmin = IPv4Address(request.form.get('min'))
-        ipmax = IPv4Address(request.form.get('max'))
-        rangetype = request.form.get('type')
+        ipmin = IPv4Address(data.get('min'))
+        ipmax = IPv4Address(data.get('max'))
+        rangetype = data.get('type')
         for iprange in Range.query.all():
             if iprange.contains(ipmin) or iprange.contains(ipmax):
                 abort(400, "Range overlaps with existing ranges %s" % (iprange.id))
@@ -314,10 +323,10 @@ class RangeListAPI(MethodView):
                             ip.address.compressed, ip.range_id))
                     range_ips.append(ip)
         ip_range = Range(type=rangetype,
-                min=request.form.get('min'),
-                max=request.form.get('max'),
-                subnet=_get_or_none(Subnet,request.form.get('subnet')),
-                pool=_get_or_none(Pool,request.form.get('pool')))
+                min=data.get('min'),
+                max=data.get('max'),
+                subnet=_get_or_none(Subnet,data.get('subnet')),
+                pool=_get_or_none(Pool,data.get('pool')))
         deployable = True
         if ip_range.subnet:
             if not ip_range.subnet.deployed:
@@ -325,8 +334,8 @@ class RangeListAPI(MethodView):
         if ip_range.pool:
             if not ip_range.pool.deployed:
                 deployable = False
-        ip_range.deployed = eval(str(request.form.get('deployed',True)))
-        if 'deployed' in request.form:
+        ip_range.deployed = data.get('deployed',True)
+        if 'deployed' in data:
             if ip_range.deployed and not deployable:
                 abort(400, "Cannot deploy IP range as part of non-deployed subnet or pool")
         else:
@@ -349,15 +358,16 @@ class RangeAPI(MethodView):
 
     def put(self, range_id):
         ip_range = get_or_404(Range, range_id)
+        data = request.get_json(force=True)
         ip_range.ldap_delete()
-        if 'type' in request.form:
-            ip_range.type = request.form.get('type')
-        if 'subnet' in request.form:
-            ip_range.subnet = _get_or_none(Subnet,request.form.get('subnet'))
-        if 'pool' in request.form:
-            ip_range.pool = _get_or_none(Pool,request.form.get('pool'))
-        if 'deployed' in request.form:
-            ip_range.deployed = request.form.get('deployed')
+        if 'type' in data:
+            ip_range.type = data.get('type')
+        if 'subnet' in data:
+            ip_range.subnet = _get_or_none(Subnet,data.get('subnet'))
+        if 'pool' in data:
+            ip_range.pool = _get_or_none(Pool,data.get('pool'))
+        if 'deployed' in data:
+            ip_range.deployed = data.get('deployed')
             if ip_range.deployed:
                 if ip_range.pool:
                     if not ip_range.pool.deployed:
@@ -384,12 +394,13 @@ class PoolListAPI(MethodView):
         return jsonify(dict(items=[pool.config() for pool in pools]))
 
     def post(self):
-        if any(key not in request.form for key in ['name','subnet','range']):
+        data = request.get_json(force=True)
+        if any(key not in data for key in ['name','subnet','range']):
             abort(400, "Pool requires name, subnet, and range")
-        pool = Pool(name=request.form.get('name'),
-                subnet_id=request.form.get('subnet'),
-                range_id=request.form.get('range'),
-                options=request.form.get('options'))
+        pool = Pool(name=data.get('name'),
+                subnet_id=data.get('subnet'),
+                range_id=data.get('range'),
+                options=json.dumps(data.get('options', {})))
         deployable = True
         if pool.subnet_id:
             subnet = get_or_404(Subnet, pool.subnet_id)
@@ -399,8 +410,8 @@ class PoolListAPI(MethodView):
             ip_range = get_or_404(Range, pool.range_id)
             if not ip_range.deployed:
                 deployable = False
-        pool.deployed = eval(str(request.form.get('deployed', True)))
-        if 'deployed' in request.form:
+        pool.deployed = data.get('deployed', True)
+        if 'deployed' in data:
             if pool.deployed and not deployable:
                 abort(400, "Cannot deploy pool with non-deployed IP range or subnet")
         else:
@@ -419,15 +430,18 @@ class PoolAPI(MethodView):
 
     def put(self, pool_id):
         pool = get_or_404(Pool, pool_id)
+        data = request.get_json(force=True)
         pool.ldap_delete()
-        if 'name' in request.form:
-            pool.name = request.form.get('name')
-        if 'subnet' in request.form:
-            pool.subnet_id = request.form.get('subnet')
-        if 'range' in request.form:
-            pool.range_id = request.form.get('range')
-        if 'deployed' in request.form:
-            pool.deployed = request.form.get('deployed')
+        if 'name' in data:
+            pool.name = data.get('name')
+        if 'subnet' in data:
+            pool.subnet_id = data.get('subnet')
+        if 'range' in data:
+            pool.range_id = data.get('range')
+        if 'options' in data:
+            pool.options = json.dumps(data.get('options'))
+        if 'deployed' in data:
+            pool.deployed = data.get('deployed')
             if pool.deployed:
                 if pool.range_id:
                     ip_range = get_or_404(Range, pool.range_id)
