@@ -7,6 +7,7 @@ define([
     var columns = [
         {
             name: 'name',
+            label: 'Group Name',
             cell: 'string',
             editable: false
         }

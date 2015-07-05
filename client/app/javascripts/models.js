@@ -2,6 +2,9 @@ define(['backbone'], function (Backbone) {
     var exports = {}
 
     exports.GroupModel = Backbone.Model.extend({
+        defaults: {
+            name: ''
+        },
         urlRoot: '/api/groups/'
     })
 

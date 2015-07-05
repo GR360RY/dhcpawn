@@ -7,16 +7,19 @@ define([
     var columns = [
         {
             name: 'type',
+            label: 'Range Type',
             cell: 'string',
             editable: false
         },
         {
             name: 'min',
+            label: 'Min IP',
             cell: 'string',
             editable: false
         },
         {
             name: 'max',
+            label: 'Max IP',
             cell: 'string',
             editable: false
         }
