@@ -3,7 +3,8 @@ JS := bower_components/jquery/dist/jquery.min.js \
     bower_components/bootstrap-sans-bullshit/dist/js/bootstrap.min.js \
     bower_components/lodash/lodash.min.js \
     bower_components/backbone/backbone-min.js \
-    bower_components/backgrid/lib/backgrid.min.js
+    bower_components/backgrid/lib/backgrid.min.js \
+    bower_components/backbone-validation/dist/backbone-validation-amd-min.js
 
 _runserver: node_modules
 	- grunt jshint

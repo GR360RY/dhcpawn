@@ -5,6 +5,13 @@ define(['backbone'], function (Backbone) {
         defaults: {
             name: ''
         },
+
+        validation: {
+            name: {
+                required: true
+            }
+        },
+
         urlRoot: '/api/groups/'
     })
 

@@ -6,6 +6,7 @@ requirejs.config({
         backbone: 'vendor/backbone-min',
         backgrid: 'vendor/backgrid.min',
         epoxy: 'vendor/backbone.epoxy.min',
+        validation: 'vendor/backbone-validation-amd-min',
         text: 'vendor/requirejs-text.min',
         templates: '../templates'
     },
@@ -30,8 +31,34 @@ requirejs([
     'backbone',
     'views',
     'bootstrap',
-    'epoxy'
+    'epoxy',
+    'validation'
 ], function (_, Backbone, views) {
+    Backbone.Validation.configure({
+        forceUpdate: true
+    })
+
+    function _getFormGroup(view, name) {
+        return view.$('[name=' + name + ']').closest('.form-group')
+    }
+
+    _.extend(Backbone.Validation.callbacks, {
+        valid: function (view, name) {
+            _getFormGroup(view, name)
+            .removeClass('has-error')
+            .find('.help-block')
+            .html('')
+            .addClass('hidden')
+        },
+        invalid: function (view, name, error) {
+            _getFormGroup(view, name)
+            .addClass('has-error')
+            .find('.help-block')
+            .html(error)
+            .removeClass('hidden')
+        }
+    })
+
     var Router = Backbone.Router.extend(_.defaults({
         routes: {
             '': 'index',

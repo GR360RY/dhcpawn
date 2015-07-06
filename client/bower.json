@@ -13,7 +13,8 @@
     "requirejs-text": "~2.0.14",
     "backgrid": "~0.3.5",
     "jquery": "~2.1.4",
-    "backbone.epoxy": "~1.3.1"
+    "backbone.epoxy": "~1.3.1",
+    "backbone-validation": "~0.11.5"
   },
   "resolutions": {
     "backbone": "~1.2.1",

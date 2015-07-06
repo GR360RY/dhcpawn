@@ -10,6 +10,7 @@ define([
 
         initialize: function (options) {
             this.model = new models.GroupModel
+            Backbone.Validation.bind(this)
         },
 
         render: function () {
@@ -19,7 +20,13 @@ define([
 
         _submit: function (event) {
             event.preventDefault()
-            console.log(this.model.toJSON())
+            if (this.model.isValid(true))
+                console.log(this.model.toJSON())
+        },
+
+        remove: function () {
+            Backbone.Validation.unbind(this)
+            return Backbone.Epoxy.View.prototype.remove.call(this)
         }
     })
 })
