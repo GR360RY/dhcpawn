@@ -1,8 +1,9 @@
 define([
     'backbone',
     'models',
+    'views/inlineError',
     'text!templates/createGroup.html'
-], function (Backbone, models, template) {
+], function (Backbone, models, inlineError, template) {
     return Backbone.Epoxy.View.extend({
         events: {
             'submit #form-create-group': '_submit'
@@ -21,9 +22,13 @@ define([
         _submit: function (event) {
             event.preventDefault()
             if (this.model.isValid(true)) {
-                $('button[type=submit]').attr('disabled', true)
+                this.$('button[type=submit]').attr('disabled', true)
                 this.model.save()
                 .done(Backbone.history.navigate.bind(Backbone.history, '#groups', {trigger: true}))
+                .fail(function () {
+                    this.$('button[type=submit]').attr('disabled', false)
+                    inlineError('Server Error')
+                }.bind(this))
             }
         },
 

@@ -3,6 +3,7 @@ requirejs.config({
         jquery: 'vendor/jquery.min',
         bootstrap: 'vendor/bootstrap.min',
         underscore: 'vendor/lodash.min',
+        mustache: 'vendor/mustache.min',
         backbone: 'vendor/backbone-min',
         backgrid: 'vendor/backgrid.min',
         epoxy: 'vendor/backbone.epoxy.min',
@@ -27,13 +28,14 @@ requirejs.config({
 })
 
 requirejs([
+    'jquery',
     'lodash',
     'backbone',
     'views',
     'bootstrap',
     'epoxy',
     'validation'
-], function (_, Backbone, views) {
+], function ($, _, Backbone, views) {
     var _sync = Backbone.sync
     var _stringify = JSON.stringify
     Backbone.sync = function (method, model, options) {
