@@ -34,6 +34,17 @@ requirejs([
     'epoxy',
     'validation'
 ], function (_, Backbone, views) {
+    var _sync = Backbone.sync
+    var _stringify = JSON.stringify
+    Backbone.sync = function (method, model, options) {
+        options = options || {}
+        options.contentType = 'application/x-www-form-urlencoded'
+        JSON.stringify = $.param
+        var res = _sync.call(this, method, model, options)
+        JSON.stringify = _stringify
+        return res
+    }
+
     Backbone.Validation.configure({
         forceUpdate: true
     })

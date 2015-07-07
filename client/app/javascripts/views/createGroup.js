@@ -1,14 +1,14 @@
 define([
     'backbone',
     'models',
-    'text!templates/_createGroup.html'
+    'text!templates/createGroup.html'
 ], function (Backbone, models, template) {
     return Backbone.Epoxy.View.extend({
         events: {
             'submit #form-create-group': '_submit'
         },
 
-        initialize: function (options) {
+        initialize: function () {
             this.model = new models.GroupModel
             Backbone.Validation.bind(this)
         },
@@ -20,8 +20,11 @@ define([
 
         _submit: function (event) {
             event.preventDefault()
-            if (this.model.isValid(true))
-                console.log(this.model.toJSON())
+            if (this.model.isValid(true)) {
+                $('button[type=submit]').attr('disabled', true)
+                this.model.save()
+                .done(Backbone.history.navigate.bind(Backbone.history, '#groups', {trigger: true}))
+            }
         },
 
         remove: function () {

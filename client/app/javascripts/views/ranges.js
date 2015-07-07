@@ -2,7 +2,7 @@ define([
     'backbone',
     'backgrid',
     'collections',
-    'text!templates/_ranges.html'
+    'text!templates/ranges.html'
 ], function (Backbone, Backgrid, collections, template) {
     var columns = [
         {

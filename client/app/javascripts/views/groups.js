@@ -2,7 +2,7 @@ define([
     'backbone',
     'backgrid',
     'collections',
-    'text!templates/_groups.html'
+    'text!templates/groups.html'
 ], function (Backbone, Backgrid, collections, template) {
     var columns = [
         {
