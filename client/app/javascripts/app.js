@@ -45,8 +45,14 @@ requirejs([
         return res
     }
 
+    Backbone.View.prototype._removeElement = function () {
+        this.undelegateEvents()
+        this.$el.empty()
+    }
+
     Backbone.Validation.configure({
-        forceUpdate: true
+        forceUpdate: true,
+        labelFormatter: 'label'
     })
 
     function _getFormGroup(view, name) {
@@ -76,11 +82,12 @@ requirejs([
             'groups': 'groups',
             'groups/create': 'createGroup',
             'ranges': 'ranges',
+            'ranges/create': 'createRange',
             '*404': 'notFound'
         },
 
         notFound: function () {
-            app.navigate('', true)
+            app.navigate('', {trigger: true, replace: true})
         }
     }, views))
 

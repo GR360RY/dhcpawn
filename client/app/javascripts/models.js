@@ -7,15 +7,30 @@ define(['backbone'], function (Backbone) {
         },
 
         validation: {
-            name: {
-                required: true
-            }
+            name: {required: true}
         },
 
         urlRoot: '/api/groups/'
     })
 
     exports.RangeModel = Backbone.Model.extend({
+        defaults: {
+            type: 'static',
+            min: '',
+            max: ''
+        },
+
+        labels: {
+            min: 'Min IP',
+            max: 'Max IP'
+        },
+
+        validation: {
+            type: {required: true},
+            min: {required: true},
+            max: {required: true}
+        },
+
         urlRoot: '/api/ranges/'
     })
 

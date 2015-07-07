@@ -1,0 +1,30 @@
+<div class="container-fluid create-range">
+    <h1>Create Range</h1>
+    <div class="row">
+        <div class="col-md-5 col-sm-6 col-xs-8">
+            <form id="form-create-range">
+                <div class="form-group">
+                    <label for="input-name" class="control-label">Range Type:</label>
+                    <select class="form-control" id="input-type" name="type" data-bind="value:type">
+                        <option value="dynamic">Dynamic</option>
+                        <option value="static">Static</option>
+                    </select>
+                    <span class="help-block hidden"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-min" class="control-label">Min IP:</label>
+                    <input type="text" class="form-control" id="input-min" name="min" data-bind="value:min">
+                    <span class="help-block hidden"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-max" class="control-label">Max IP:</label>
+                    <input type="text" class="form-control" id="input-max" name="max" data-bind="value:max">
+                    <span class="help-block hidden"></span>
+                </div>
+                <button type="submit" class="btn btn-success">Create Range</button>
+            </form>
+        </div>
+    </div>
+</div>
