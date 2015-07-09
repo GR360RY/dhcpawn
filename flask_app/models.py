@@ -118,7 +118,7 @@ class Subnet(LDAPModel):
                 cn=str(self.name),
                 dhcpNetMask=str(self.netmask))
         if self.range and self.range.deployed:
-            mod_dict.update(dict(dhcpRange=[str('range %s %s' % (self.range.min, self.range.max))]))
+            mod_dict.update(dict(dhcpRange=[str('%s %s' % (self.range.min, self.range.max))]))
         return gen_modlist(mod_dict, self.options)
 
     def config(self):
