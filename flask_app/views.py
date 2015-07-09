@@ -1,6 +1,7 @@
 from flask import render_template, jsonify, request, abort
 from flask.views import MethodView
 import ldap
+import subprocess
 
 from .app import app, ldap_obj
 from .models import db, Host, Group, Subnet, IP, Range, Pool
@@ -63,3 +64,20 @@ def allocate(range_id):
         db.session.add(ip_obj)
     db.session.commit()
     return jsonify(iprange.config())
+
+@app.route("/api/status/", methods=['GET'])
+def status():
+    # return information about the server status
+    # service slapd status
+    services = {'isc-dhcp-server':'', 'slapd':''}
+    for service in services:
+        try:
+            output = subprocess.check_output(['service',service,'status'])
+            if 'running' in output:
+                services[service] = dict(state='R', output='')
+            else:
+                # TODO: find more details in /var/log/syslog
+                services[service] = dict(state='E', output=output)
+        except (subprocess.CalledProcessError, OSError) as e:
+            services[service] = dict(state='E', output=str(e))
+    return jsonify(services)
