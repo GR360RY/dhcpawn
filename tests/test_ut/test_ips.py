@@ -97,3 +97,15 @@ def test_too_large_allocation(webapp):
         'max':'10.100.100.150','subnet':1,'type':'static'}))
     with pytest.raises(requests.HTTPError):
         iprange = webapp.put('/api/ranges/1/allocate/', data=json.dumps({'number':100}))
+
+def test_incorrect_range_in_subnet(webapp):
+    webapp.post('/api/subnets/', data=json.dumps({'name':'10.100.100.0','netmask':22}))
+    with pytest.raises(requests.HTTPError):
+        webapp.post('/api/ranges/', data=json.dumps({'name':'test_range_00','min':'172.100.100.100',
+            'max':'172.100.100.150','subnet':1,'type':'static'}))
+
+def test_incorrect_range_in_pool(webapp):
+    webapp.post('/api/subnets/', data=json.dumps({'name':'10.100.100.0','netmask':22}))
+    webapp.post('/api/ranges/', data=json.dumps({'type':'dynamic','min':'172.100.100.200','max':'172.100.100.253'}))
+    with pytest.raises(requests.HTTPError):
+        webapp.post('/api/pools/', data=json.dumps({'name':'test_pool_00','range':1,'subnet':1}))
