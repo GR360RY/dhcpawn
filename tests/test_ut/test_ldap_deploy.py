@@ -22,17 +22,22 @@ def test_deploy_group_to_ldap(webapp):
     ldap_obj = _ldap_init(webapp)
     with pytest.raises(ldap.NO_SUCH_OBJECT):
         ldap_groups = ldap_obj.search_s('cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
-    with pytest.raises(requests.HTTPError):
-        webapp.post('/api/hosts/', data=json.dumps({'name':'test_host_00','mac':'08:00:27:26:7a:e7','group':1}))
-    webapp.put('/api/groups/1', data=json.dumps({'deployed':True}))
     webapp.post('/api/hosts/', data=json.dumps({'name':'test_host_00','mac':'08:00:27:26:7a:e7','group':1}))
+    host = webapp.get('/api/hosts/1')
+    assert not host['deployed']
+    webapp.put('/api/groups/1', data=json.dumps({'deployed':True}))
+    with pytest.raises(ldap.NO_SUCH_OBJECT):
+        ldap_hosts = ldap_obj.search_s('cn=test_host_00,cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    webapp.put('/api/hosts/1', data=json.dumps({'deployed':True}))
     ldap_groups = ldap_obj.search_s('cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
     assert len(ldap_groups) == 1
     assert ldap_groups[0][1]['cn'] == ['test_group_00']
-    webapp.put('/api/groups/1', data=json.dumps({'deployed':False}))
-    ldap_hosts = ldap_obj.search_s('cn=test_host_00,ou=Hosts,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
+    ldap_hosts = ldap_obj.search_s('cn=test_host_00,cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
     assert len(ldap_hosts) == 1
     assert ldap_hosts[0][1]['dhcpHWAddress'] == ['ethernet 08:00:27:26:7a:e7']
+    webapp.put('/api/groups/1', data=json.dumps({'deployed':False}))
+    with pytest.raises(ldap.NO_SUCH_OBJECT):
+        ldap_hosts = ldap_obj.search_s('cn=test_host_00,cn=test_group_00,ou=Groups,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
 
 def test_deploy_subnet_to_ldap(webapp):
     webapp.post('/api/subnets/', data=json.dumps({'name':'10.100.100.0','netmask':22,'deployed':False}))
@@ -101,8 +106,7 @@ def test_deploy_pool_to_ldap(webapp):
         ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' % 
                 (_server_dn(webapp)), ldap.SCOPE_BASE)
     webapp.put('/api/pools/1', data=json.dumps({'deployed':True}))
-    # due to the requirement that pools have ranges, if a pool has a non-deployed range, it will override that upon creation/deployment
-    iprange = json.loads(webapp.get('/api/ranges/1'))
+    iprange = webapp.get('/api/ranges/1')
     assert iprange['deployed']
     ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
         (_server_dn(webapp)), ldap.SCOPE_BASE)
@@ -115,6 +119,5 @@ def test_deploy_pool_to_ldap(webapp):
     with pytest.raises(ldap.NO_SUCH_OBJECT):
         ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' % 
                 (_server_dn(webapp)), ldap.SCOPE_BASE)
-    # due to the requirement that pools have ranges, if a pool has a non-deployed range, it will override that upon creation/deployment
-    iprange = json.loads(webapp.get('/api/ranges/1'))
+    iprange = webapp.get('/api/ranges/1')
     assert not iprange['deployed']

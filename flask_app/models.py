@@ -5,7 +5,7 @@ from sqlalchemy_utils import IPAddressType
 import ldap
 import ldap.modlist
 import json
-from ipaddr import IPAddress
+from ipaddr import IPv4Address, IPv4Network
 
 db = SQLAlchemy(app)
 
@@ -121,6 +121,10 @@ class Subnet(LDAPModel):
             mod_dict.update(dict(dhcpRange=[str('%s %s' % (self.range.min, self.range.max))]))
         return gen_modlist(mod_dict, self.options)
 
+    def contains(self, ip):
+        network = IPv4Network('%s/%d' % (self.name, self.netmask))
+        return ip in network
+
     def config(self):
         return dict(id = self.id,
                 dn = self.dn(),
@@ -170,16 +174,20 @@ class Range(db.Model):
     deployed = db.Column(db.Boolean, default=True)
 
     def ldap_add(self):
-        if self.type == 'dynamic' and self.subnet and self.deployed:
-            self.subnet.ldap_modify()
+        if self.type == 'dynamic' and self.deployed:
+            if self.subnet:
+                self.subnet.ldap_modify()
+            if self.pool:
+                self.pool.ldap_modify()
 
     def ldap_delete(self):
-        if self.type == 'dynamic' and self.subnet and self.deployed:
-            subnet = self.subnet
-            subnet.ip = None
-            db.session.add(subnet)
-            db.session.commit()
-            subnet.ldap_modify()
+        if self.type == 'dynamic' and self.deployed:
+            if self.subnet:
+                subnet = self.subnet
+                subnet.range = None
+                db.session.add(subnet)
+                db.session.commit()
+                subnet.ldap_modify()
 
     def free_ips(self, num=1):
         # return the first IP address in the range, from the top, without conflict
@@ -232,7 +240,7 @@ class Pool(LDAPModel):
         # range is required
         mod_dict = dict(objectClass=['dhcpPool', 'top'],
                 cn=str(self.name),
-                dhcpRange=[str('range %s %s' % (self.range.min, self.range.max))])
+                dhcpRange=[str('%s %s' % (self.range.min, self.range.max))])
         return gen_modlist(mod_dict, self.options)
 
     def config(self):

@@ -1,6 +1,6 @@
 from flask import jsonify, request, abort
 from flask.views import MethodView
-from ipaddr import IPv4Address
+from ipaddr import IPv4Address, IPv4Network
 import json
 
 from .app import app, ldap_obj
@@ -58,6 +58,12 @@ class HostAPI(MethodView):
     def put(self, host_id):
         host = get_or_404(Host, host_id)
         data = request.get_json(force=True)
+        if 'deployed' in data:
+            deployed = data.get('deployed',True)
+            if deployed and host.group_id:
+                group = get_or_404(Group, host.group_id)
+                if not group.deployed:
+                    abort(400, "Cannot deploy host as subobject of non-deployed group")
         host.ldap_delete()
         if 'name' in data:
             host.name = data.get('name')
@@ -69,10 +75,6 @@ class HostAPI(MethodView):
             host.options = json.dumps(data.get('options'))
         if 'deployed' in data:
             host.deployed = data.get('deployed',True)
-            if host.deployed and host.group_id:
-                group = get_or_404(Group, host.group_id)
-                if not group.deployed:
-                    abort(400, "Cannot deploy host as subobject of non-deployed group")
         db.session.add(host)
         db.session.commit()
         host.ldap_add()
@@ -121,11 +123,16 @@ class GroupAPI(MethodView):
             group.options = json.dumps(data.get('options'))
         if 'deployed' in data:
             group.deployed = data.get('deployed')
+            if not group.deployed:
+                for host in group.hosts.all():
+                    host.deployed = False
+                    db.session.add(host)
         db.session.add(group)
         db.session.commit()
         group.ldap_add()
-        for host in group.hosts.all():
-            host.ldap_add()
+        if group.deployed:
+            for host in group.hosts.all():
+                host.ldap_add()
         return jsonify(group.config())
 
     def delete(self, group_id):
@@ -136,6 +143,7 @@ class GroupAPI(MethodView):
             host.group_id = None
             hosts.append(host)
             db.session.add(host)
+        group.ldap_delete()
         db.session.delete(group)
         db.session.commit()
         for host in hosts:
@@ -178,15 +186,39 @@ class SubnetAPI(MethodView):
             subnet.deployed = data.get('deployed')
         db.session.add(subnet)
         db.session.commit()
-        subnet.ldap_modify()
+        if subnet.deployed:
+            subnet.ldap_modify()
+        else:
+            subnet.deployed = True
+            for pool in subnet.pools.all():
+                pool.ldap_delete()
+                pool.deployed = False
+                db.session.add(pool)
+            for ip in subnet.ips.all():
+                ip.ldap_delete()
+                ip.deployed = False
+                db.session.add(ip)
+            if subnet.range:
+                subnet.range.deployed = False
+                db.session.add(subnet)
+            # manually delete, as deployed is False
+            ldap_obj.delete_s(subnet.dn())
+            db.session.commit()
         return jsonify(subnet.config())
 
     def delete(self, subnet_id):
         subnet = get_or_404(Subnet, subnet_id)
         for pool in subnet.pools.all():
+            pool.ldap_delete()
+            if pool.range:
+                db.session.delete(pool.range)
             db.session.delete(pool)
         for ip in subnet.ips.all():
             db.session.delete(ip)
+        if subnet.range:
+            db.session.delete(subnet.range)
+        db.session.commit()
+        subnet.ldap_delete()
         db.session.delete(subnet)
         db.session.commit()
         return jsonify(dict(items=[subnet.config() for subnet in Subnet.query.all()]))
@@ -265,14 +297,9 @@ class IPAPI(MethodView):
         data = request.get_json(force=True)
         if data.get('address') or data.get('range'):
             abort(400, "IP POST requests only accept host and subnet IDs")
-        ip.ldap_delete()
-        if 'host' in data:
-            ip.host_id = data.get('host')
-        if 'subnet' in data:
-            ip.subnet_id = data.get('subnet')
         if 'deployed' in data:
-            ip.deployed = data.get('deployed')
-            if ip.deployed:
+            deployed = data.get('deployed')
+            if deployed:
                 if ip.host_id:
                     host = get_or_404(Host, ip.host_id)
                     if not host.deployed:
@@ -285,6 +312,13 @@ class IPAPI(MethodView):
                     ip_range = get_or_404(Range, ip.range_id)
                     if not ip_range.deployed:
                         abort(400, "Cannot deploy IP as part of non-deployed IP range")
+        ip.ldap_delete()
+        if 'host' in data:
+            ip.host_id = data.get('host')
+        if 'subnet' in data:
+            ip.subnet_id = data.get('subnet')
+        if 'deployed' in data:
+            ip.deployed = data.get('deployed')
         db.session.add(ip)
         db.session.commit()
         ip.ldap_add()
@@ -329,9 +363,17 @@ class RangeListAPI(MethodView):
                 pool=_get_or_none(Pool,data.get('pool')))
         deployable = True
         if ip_range.subnet:
+            if not (ip_range.subnet.contains(ipmin) and ip_range.subnet.contains(ipmax)):
+                abort(400, "This range %s - %s is not contained in the subnet %s/%d" %
+                        (ip_range.min, ip_range.max, ip_range.subnet.name, ip_range.subnet.netmask))
             if not ip_range.subnet.deployed:
                 deployable = False
         if ip_range.pool:
+            if ip_range.pool.subnet_id:
+                subnet = get_or_404(Subnet, ip_range.pool.subnet_id)
+                if not (ip_range.subnet.contains(ipmin) and ip_range.subnet.contains(ipmax)):
+                    abort(400, "This range %s - %s is not contained in the subnet %s/%d" %
+                            (ip_range.min, ip_range.max, ip_range.subnet.name, ip_range.subnet.netmask))
             if not ip_range.pool.deployed:
                 deployable = False
         ip_range.deployed = data.get('deployed',True)
@@ -359,6 +401,19 @@ class RangeAPI(MethodView):
     def put(self, range_id):
         ip_range = get_or_404(Range, range_id)
         data = request.get_json(force=True)
+        if 'deployed' in data:
+            deployed = data.get('deployed')
+            if deployed:
+                if ip_range.pool:
+                    if not ip_range.pool.deployed:
+                        abort(400, "Cannot deploy IP range as parameter of non-deployed pool")
+                if ip_range.subnet:
+                    if not ip_range.subnet.deployed:
+                        abort(400, "Cannot deploy IP range as part of non-deployed subnet")
+            if not deployed:
+                if ip_range.pool:
+                    if ip_range.pool.deployed:
+                        abort(400, "Cannot revoke IP range as parameter of deployed pool")
         ip_range.ldap_delete()
         if 'type' in data:
             ip_range.type = data.get('type')
@@ -368,13 +423,6 @@ class RangeAPI(MethodView):
             ip_range.pool = _get_or_none(Pool,data.get('pool'))
         if 'deployed' in data:
             ip_range.deployed = data.get('deployed')
-            if ip_range.deployed:
-                if ip_range.pool:
-                    if not ip_range.pool.deployed:
-                        abort(400, "Cannot deploy IP range as parameter of non-deployed pool")
-                if ip_range.subnet:
-                    if not ip_range.subnet.deployed:
-                        abort(400, "Cannot deploy IP range as part of non-deployed subnet")
         db.session.add(ip_range)
         db.session.commit()
         ip_range.ldap_add()
@@ -382,6 +430,8 @@ class RangeAPI(MethodView):
 
     def delete(self, range_id):
         ip_range = get_or_404(Range, range_id)
+        if ip_range.pool and ip_range.pool.deployed:
+            abort(400, "Cannot delete range of deployed pool")
         ip_range.ldap_delete()
         db.session.delete(ip_range)
         db.session.commit()
@@ -402,14 +452,15 @@ class PoolListAPI(MethodView):
                 range_id=data.get('range'),
                 options=json.dumps(data.get('options', {})))
         deployable = True
-        if pool.subnet_id:
-            subnet = get_or_404(Subnet, pool.subnet_id)
-            if not subnet.deployed:
-                deployable = False
-        if pool.range_id:
-            ip_range = get_or_404(Range, pool.range_id)
-            if not ip_range.deployed:
-                deployable = False
+        subnet = get_or_404(Subnet, pool.subnet_id)
+        if not subnet.deployed:
+            deployable = False
+        ip_range = get_or_404(Range, pool.range_id)
+        if not ip_range.deployed:
+            deployable = False
+        if not (subnet.contains(ip_range.min) and subnet.contains(ip_range.max)):
+            abort(400, "This pool range %s - %s is not contained in the subnet %s/%d" %
+                            (ip_range.min, ip_range.max, subnet.name, subnet.netmask))
         pool.deployed = data.get('deployed', True)
         if 'deployed' in data:
             if pool.deployed and not deployable:
@@ -431,6 +482,13 @@ class PoolAPI(MethodView):
     def put(self, pool_id):
         pool = get_or_404(Pool, pool_id)
         data = request.get_json(force=True)
+        if 'deployed' in data:
+            deployed = data.get('deployed')
+            if deployed:
+                if pool.subnet_id:
+                    subnet = get_or_404(Subnet, pool.subnet_id)
+                    if not subnet.deployed:
+                        abort(400, "Cannot deploy pool with non-deployed subnet")
         pool.ldap_delete()
         if 'name' in data:
             pool.name = data.get('name')
@@ -442,16 +500,10 @@ class PoolAPI(MethodView):
             pool.options = json.dumps(data.get('options'))
         if 'deployed' in data:
             pool.deployed = data.get('deployed')
-            if pool.deployed:
-                if pool.range_id:
-                    ip_range = get_or_404(Range, pool.range_id)
-                    if not ip_range.deployed:
-                        ip_range.deployed = True
-                        db.session.add(ip_range)
-                if pool.subnet_id:
-                    subnet = get_or_404(Subnet, pool.subnet_id)
-                    if not subnet.deployed:
-                        abort(400, "Cannot deploy pool with non-deployed subnet")
+            if pool.range_id:
+                ip_range = get_or_404(Range, pool.range_id)
+                ip_range.deployed = pool.deployed
+                db.session.add(ip_range)
         db.session.add(pool)
         db.session.commit()
         pool.ldap_add()
@@ -459,6 +511,9 @@ class PoolAPI(MethodView):
 
     def delete(self, pool_id):
         pool = get_or_404(Pool, pool_id)
+        pool.ldap_delete()
+        if pool.range:
+            db.session.delete(pool.range)
         db.session.delete(pool)
         db.session.commit()
         return jsonify([pool.config() for pool in Pool.query.all()])

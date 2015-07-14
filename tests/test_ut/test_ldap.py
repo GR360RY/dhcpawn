@@ -151,6 +151,17 @@ def test_allocate_dynamic_range(webapp):
     ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' % (_server_dn(webapp)), ldap.SCOPE_BASE)
     assert '10.100.100.100 10.100.100.253' in ldap_subnets[0][1]['dhcpRange']
 
+def test_delete_range(webapp):
+    webapp.post('/api/subnets/', data=json.dumps({'name':'10.100.100.0','netmask':22}))
+    webapp.post('/api/ranges/', data=json.dumps({'type':'dynamic','min':'10.100.100.200','max':'10.100.100.253'}))
+    webapp.post('/api/pools/', data=json.dumps({'name':'test_pool_00','range':1,'subnet':1}))
+    with pytest.raises(requests.HTTPError):
+        webapp.delete('/api/ranges/1')
+    ldap_obj = _ldap_init(webapp)
+    ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
+        (_server_dn(webapp)), ldap.SCOPE_BASE)
+    assert ldap_pools[0][1]['dhcpRange'] == ['10.100.100.200 10.100.100.253']
+
 def test_create_dynamic_pool(webapp):
     webapp.post('/api/subnets/', data=json.dumps({'name':'10.100.100.0','netmask':22}))
     webapp.post('/api/ranges/', data=json.dumps({'type':'dynamic','min':'10.100.100.200','max':'10.100.100.253'}))
@@ -189,13 +200,13 @@ def test_delete_subnet(webapp):
     ldap_obj = _ldap_init(webapp)
     ldap_subnets = ldap_obj.search_s('cn=10.100.100.0,ou=Subnets,%s' %
         (_server_dn(webapp)), ldap.SCOPE_BASE)
-    assert ldap_subnets[0][1]['cn'] == ['test_pool_00']
+    assert ldap_subnets[0][1]['cn'] == ['10.100.100.0']
     webapp.delete('/api/subnets/1')
     with pytest.raises(requests.HTTPError):
         webapp.get('/api/ranges/1')
     webapp.post('/api/subnets/', data=json.dumps({'name':'10.100.100.0','netmask':22}))
     webapp.post('/api/ranges/', data=json.dumps({'type':'dynamic','min':'10.100.100.200','max':'10.100.100.253'}))
-    webapp.post('/api/pools/', data=json.dumps({'name':'test_pool_00','range':1,'subnet':1,
+    webapp.post('/api/pools/', data=json.dumps({'name':'test_pool_00','range':2,'subnet':2,
         'options':{'dhcpStatements': ['default-lease-time 120'], 'dhcpOption': ['routers 10.0.0.254', 'broadcast-address 10.100.100.255']}}))
     ldap_obj = _ldap_init(webapp)
     ldap_pools = ldap_obj.search_s('cn=test_pool_00,cn=10.100.100.0,ou=Subnets,%s' %
@@ -212,7 +223,6 @@ def test_delete_subnet(webapp):
 
 def test_delete_pool(webapp):
     # make sure range is deleted
-    assert False
     webapp.post('/api/subnets/', data=json.dumps({'name':'10.100.100.0','netmask':22}))
     webapp.post('/api/ranges/', data=json.dumps({'type':'dynamic','min':'10.100.100.200','max':'10.100.100.253'}))
     webapp.post('/api/pools/', data=json.dumps({'name':'test_pool_00','range':1,'subnet':1,
